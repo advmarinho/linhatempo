@@ -156,7 +156,15 @@
     .tr-concluido {
       background-color: #d4f7df !important;
     }
-    .tr-concluido button {
+    .tr-pendente {
+      background-color: #fff9db !important;
+    }
+    .tr-andamento {
+      background-color: #e8f4ff !important;
+    }
+    .tr-concluido button,
+    .tr-pendente button,
+    .tr-andamento button {
       pointer-events: auto !important;
     }
 
@@ -198,13 +206,17 @@
 
     .card-atrasado {
       border-left-color: #e74c3c !important;
+      background-color: #fdecea !important;
+    }
+
+    .card-pendente {
+      border-left-color: #f1c40f !important;
+      background-color: #fff9db !important;
     }
 
     .card-andamento {
       border-left-color: #3498db !important;
-      border-left-color: #f1c40f !important;
-      background-color: #fff9db !important;
-    }
+      background-color: #e8f4ff !important;
     }
 
     /* ===== GANTT ===== */
@@ -464,6 +476,10 @@ function showDay(day){
   activityData[day].forEach((a,i)=>{
     const tr=document.createElement("tr");
     if(a.status==="Concluído"){ tr.classList.add("tr-concluido"); }
+    else if(a.status==="Pendente"){ tr.classList.add("tr-pendente"); }
+    else if(a.status==="Em andamento"){ tr.classList.add("tr-andamento"); }
+    else if(a.status==="Pendente"){ tr.classList.add("tr-pendente"); }
+    else if(a.status==="Em andamento"){ tr.classList.add("tr-andamento"); }
 
     tr.innerHTML=`
       <td><textarea oninput="autoResizeTextarea(this); updateField(${day},${i},'text',this.value)" onchange="updateField(${day},${i},'text',this.value)">${a.text||""}</textarea></td>
@@ -718,6 +734,7 @@ function renderFluxo(){
       if(a.status==="Concluído") card.classList.add("card-concluido");
       else if(a.atrasada) card.classList.add("card-atrasado");
       else if(a.status==="Em andamento") card.classList.add("card-andamento");
+      else if(a.status==="Pendente") card.classList.add("card-pendente");
 
       card.innerHTML=`
         <b>${a.text||""}</b><br>
