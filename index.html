@@ -1,461 +1,572 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gerenciador RH – PMO SONOVA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
 
   <style>
-    body {
-      font-family: Calibri, sans-serif;
-      background-color: #f7f7f7;
-      margin: 20px;
-    }
-    h2 {
-      text-align: center;
-      color: #2e6da4;
-    }
+  :root {
+    --primary:      #0083CA;
+    --primary-dk:   #003C64;
+    --primary-md:   #005A8E;
+    --primary-lt:   #6EB4DC;
+    --primary-pale: #E8F3FB;
+    --success:      #27ae60;
+    --warning:      #d48700;
+    --danger:       #c0392b;
+    --info:         #2980b9;
+    --text:         #1a2733;
+    --text-muted:   #5b6b7a;
+    --text-light:   #8fa3b3;
+    --bg:           #eef2f6;
+    --surface:      #ffffff;
+    --border:       #d1dae4;
+    --border-lt:    #e8edf2;
+    --shadow-xs:    0 1px 3px rgba(0,60,100,.07);
+    --shadow-sm:    0 2px 8px rgba(0,60,100,.10);
+    --shadow-md:    0 4px 20px rgba(0,60,100,.13);
+    --radius:       8px;
+    --radius-lg:    12px;
+    --font:         'Inter', Calibri, sans-serif;
+    --font-d:       'Barlow Condensed', sans-serif;
+  }
 
-    /* MENU */
-    .menu {
-      display: flex;
-      justify-content: center;
-      gap: 15px;
-      margin-bottom: 20px;
-    }
-    .menu button {
-      padding: 10px 18px;
-      border: none;
-      border-radius: 6px;
-      background-color: #2e6da4;
-      color: white;
-      cursor: pointer;
-      font-size: 15px;
-    }
-    .menu button:hover {
-      background-color: #1b4d7a;
-    }
-    .panel {
-      display: none;
-    }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    #mesAtual {
-      text-align: center;
-      font-size: 20px;
-      color: #2e6da4;
-      margin-bottom: 20px;
-      font-weight: bold;
-    }
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.55;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
 
-    /* ===== TIMELINE ===== */
-    .timeline {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 8px;
-      margin-bottom: 20px;
-    }
+  /* ── HEADER ── */
+  .app-header {
+    background: linear-gradient(120deg, var(--primary-dk) 0%, var(--primary-md) 60%, #005A64 100%);
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 68px;
+    box-shadow: 0 3px 16px rgba(0,0,0,.28);
+    position: sticky;
+    top: 0;
+    z-index: 200;
+  }
+  .header-brand { display: flex; align-items: center; gap: 14px; }
+  .header-sigla {
+    background: var(--primary);
+    color: #fff;
+    font-family: var(--font-d);
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    padding: 7px 13px;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.22);
+    border: 1px solid rgba(255,255,255,.14);
+  }
+  .header-title {
+    font-family: var(--font-d);
+    font-size: 19px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: .5px;
+    line-height: 1.1;
+  }
+  .header-subtitle {
+    font-size: 10px;
+    color: var(--primary-lt);
+    font-weight: 500;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+  .header-mes {
+    color: #fff;
+    font-family: var(--font-d);
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    background: rgba(255,255,255,.12);
+    padding: 6px 16px;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,.20);
+  }
 
-    .day {
-      width: 55px;
-      height: 55px;
-      background: #fff;
-      border: 2px solid #2e6da4;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      font-weight: bold;
-      color: #2e6da4;
-      transition: .2s;
-    }
-    .day:hover {
-      background-color: #2e6da4;
-      color: white;
-    }
-    .day.selected {
-      background-color: #2e6da4;
-      color: white;
-    }
-    .day.concluido {
-      background-color: #2ecc71 !important;
-      border-color: #27ae60 !important;
-      color: white !important;
-    }
+  /* ── NAV TABS ── */
+  .app-nav {
+    background: var(--surface);
+    border-bottom: 2px solid var(--border-lt);
+    display: flex;
+    padding: 0 32px;
+    box-shadow: var(--shadow-xs);
+    position: sticky;
+    top: 68px;
+    z-index: 100;
+  }
+  .nav-btn {
+    padding: 15px 22px 13px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 500;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    transition: color .18s, border-color .18s, background .18s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+  }
+  .nav-btn:hover { color: var(--primary); background: var(--primary-pale); }
+  .nav-btn.active { color: var(--primary-dk); border-bottom-color: var(--primary); font-weight: 700; }
 
-    .day.saturday {
-      background-color: #d9edf7;
-      border-color: #5bc0de;
-    }
-    .day.sunday {
-      background-color: #f2dede;
-      border-color: #d9534f;
-    }
+  /* ── CONTEÚDO ── */
+  .app-content { flex: 1; max-width: 1440px; width: 100%; margin: 0 auto; padding: 28px 32px; }
+  .panel { display: none; }
 
-    .activity-panel {
-      background: white;
-      padding: 15px;
-      border-radius: 10px;
-      box-shadow: 0 0 6px #ccc;
-      margin-top: 20px;
-    }
+  .section-head { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+  .section-head h2 {
+    font-family: var(--font-d);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--primary-dk);
+    letter-spacing: .5px;
+    white-space: nowrap;
+  }
+  .section-divider { flex: 1; height: 2px; background: linear-gradient(90deg, var(--border), transparent); border-radius: 1px; }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-      table-layout: fixed;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 8px;
-      font-size: 14px;
-      text-align: center;
-    }
-    th {
-      background-color: #e0ecf8;
-      font-weight: bold;
-    }
+  /* ── TIMELINE ── */
+  .timeline {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding: 16px;
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-lt);
+  }
+  .day {
+    width: 50px; height: 50px;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-weight: 600; font-size: 13px;
+    color: var(--text-muted);
+    transition: all .18s;
+    box-shadow: var(--shadow-xs);
+  }
+  .day:hover {
+    background: var(--primary); color: #fff; border-color: var(--primary);
+    transform: translateY(-3px);
+    box-shadow: 0 5px 14px rgba(0,131,202,.32);
+  }
+  .day.selected { background: var(--primary); color: #fff; border-color: var(--primary); box-shadow: 0 4px 12px rgba(0,131,202,.30); }
+  .day.concluido { background: var(--success) !important; border-color: #219a52 !important; color: #fff !important; box-shadow: 0 3px 10px rgba(39,174,96,.28) !important; }
+  .day.saturday { background: #edf6ff; border-color: var(--primary-lt); color: var(--info); }
+  .day.sunday   { background: #fff0f0; border-color: #e88; color: var(--danger); }
+  .day.drag-target {
+    background: var(--primary-lt) !important; color: #fff !important;
+    transform: scale(1.18) translateY(-3px) !important;
+    box-shadow: 0 8px 22px rgba(0,131,202,.45) !important;
+  }
 
-    input, textarea, select {
-      width: 100%;
-      border: none;
-      background: transparent;
-      font-size: 13px;
-    }
+  /* ── PROGRESSO ── */
+  .progress-wrap {
+    display: flex; align-items: center; gap: 14px;
+    margin-bottom: 18px; padding: 12px 18px;
+    background: var(--surface); border-radius: var(--radius);
+    box-shadow: var(--shadow-xs); border: 1px solid var(--border-lt);
+  }
+  .progress-label { font-size: 13px; font-weight: 600; color: var(--primary-dk); white-space: nowrap; min-width: 180px; }
+  .progress-bar-bg { flex: 1; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--success)); border-radius: 4px; transition: width .45s ease; min-width: 4px; }
+  .progress-pct { font-size: 12px; font-weight: 700; color: var(--primary); min-width: 44px; text-align: right; }
 
-    textarea:focus, input:focus, select:focus {
-      outline: none;
-      background-color: #eef;
-    }
+  /* ── ACTIVITY PANEL ── */
+  .activity-panel {
+    background: var(--surface); padding: 22px;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md); border: 1px solid var(--border-lt);
+  }
+  .panel-heading {
+    font-family: var(--font-d); font-size: 18px; font-weight: 700;
+    color: var(--primary-dk); letter-spacing: .5px;
+    margin-bottom: 16px; padding-bottom: 12px;
+    border-bottom: 2px solid var(--border-lt);
+    display: flex; align-items: center; gap: 8px;
+  }
 
-    button.action-btn {
-      padding: 5px 12px;
-      border-radius: 5px;
-      font-size: 13px;
-      cursor: pointer;
-      z-index: 10;
-      pointer-events: auto;
-    }
+  /* ── TOOLBAR ── */
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; align-items: center; }
+  .btn {
+    padding: 7px 15px; border: none; border-radius: 6px;
+    font-family: var(--font); font-size: 12px; font-weight: 500;
+    cursor: pointer; transition: background .15s, transform .12s, box-shadow .15s;
+    letter-spacing: .3px; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(0,0,0,.14); }
+  .btn:active { transform: translateY(0); }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover { background: var(--primary-md); }
+  .btn-outline { background: transparent; color: var(--primary); border: 1.5px solid var(--primary); }
+  .btn-outline:hover { background: var(--primary-pale); }
+  .btn-ghost { background: #f0f4f8; color: var(--text-muted); border: 1px solid var(--border); }
+  .btn-ghost:hover { background: #e2eaf2; color: var(--text); }
+  .btn-success { background: var(--success); color: #fff; }
+  .btn-success:hover { background: #219a52; }
+  .btn-warning { background: var(--warning); color: #fff; }
+  .btn-warning:hover { background: #b87300; }
+  .btn-info { background: var(--info); color: #fff; }
+  .btn-info:hover { background: #1f6391; }
+  .toolbar-sep { width: 1px; height: 28px; background: var(--border); margin: 0 4px; }
+  .hint-bar {
+    font-size: 11.5px; color: var(--text-light);
+    padding: 7px 12px; background: var(--primary-pale);
+    border-radius: 5px; border-left: 3px solid var(--primary-lt);
+    margin-bottom: 14px;
+  }
 
-    .delete-btn { background: #d9534f; color: white; }
-    .move-btn { background: #5bc0de; color: white; }
+  /* ── TABELA ── */
+  .table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border-lt); box-shadow: var(--shadow-xs); }
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  thead th {
+    background: var(--primary-dk); color: #fff;
+    font-family: var(--font-d); font-size: 12px; font-weight: 600;
+    letter-spacing: 1px; text-transform: uppercase;
+    padding: 11px 10px;
+    position: sticky; top: 112px; z-index: 5;
+    border-right: 1px solid rgba(255,255,255,.10);
+  }
+  thead th:last-child { border-right: none; }
+  tbody tr { transition: background .12s; }
+  tbody tr:nth-child(even) { background: #f5f8fc; }
+  tbody tr:hover { background: var(--primary-pale) !important; }
+  td { border: 1px solid var(--border-lt); padding: 8px 10px; font-size: 13px; vertical-align: top; word-wrap: break-word; overflow-wrap: break-word; }
+  #activityBody td:nth-child(1), #activityBody td:nth-child(8) { text-align: left; }
+  input, textarea, select { width: 100%; border: none; background: transparent; font-size: 13px; font-family: var(--font); color: var(--text); }
+  textarea:focus, input:focus, select:focus { outline: none; background: rgba(0,131,202,.06); border-radius: 3px; }
+  .activity-panel table textarea { resize: none; overflow: hidden; min-height: 30px; line-height: 1.4; white-space: pre-wrap; word-break: break-word; box-sizing: border-box; display: block; }
+  .tr-concluido { background: #e8f9ef !important; }
+  .tr-pendente  { background: #fffaec !important; }
+  .tr-andamento { background: #eaf3fb !important; }
+  .tr-concluido button, .tr-pendente button, .tr-andamento button { pointer-events: auto !important; }
+  tr[draggable="true"] { cursor: grab; }
+  tr[draggable="true"]:active { cursor: grabbing; }
+  tr.drag-over-row { outline: 2px dashed var(--primary); background: var(--primary-pale) !important; }
+  tr.dragging-row { opacity: .35; }
+  button.action-btn {
+    padding: 4px 10px; border: none; border-radius: 5px;
+    font-size: 11.5px; font-family: var(--font); cursor: pointer; font-weight: 500;
+    transition: background .14s, transform .1s;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  button.action-btn:hover { transform: translateY(-1px); }
+  .move-btn   { background: var(--info);   color: #fff; }
+  .move-btn:hover   { background: #1f6391; }
+  .delete-btn { background: var(--danger); color: #fff; }
+  .delete-btn:hover { background: #a53125; }
+  .flag-cal { cursor: pointer; font-size: 17px; user-select: none; display: block; text-align: center; transition: transform .15s, opacity .15s; }
+  .flag-cal:hover { transform: scale(1.25); }
+  .flag-cal.ativo  { opacity: 1; }
+  .flag-cal.inativo { opacity: .28; }
 
-    .delete-btn:hover { background: #b52b27; }
-    .move-btn:hover { background: #31b0d5; }
+  /* ── FLUXO ── */
+  .fluxo-search {
+    padding: 10px 16px; width: 100%; max-width: 400px;
+    border: 1.5px solid var(--border); border-radius: var(--radius);
+    font-family: var(--font); font-size: 13px;
+    background: var(--surface); color: var(--text);
+    transition: border-color .15s, box-shadow .15s;
+    margin-bottom: 20px; display: block;
+  }
+  .fluxo-search:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0,131,202,.12); }
+  #fluxoBoard { display: flex; gap: 18px; align-items: flex-start; }
+  .coluna { flex: 1; background: var(--surface); padding: 14px; border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); border: 1px solid var(--border-lt); }
+  .coluna h3 {
+    font-family: var(--font-d); font-size: 13px; font-weight: 700;
+    letter-spacing: 1.5px; text-transform: uppercase; text-align: center;
+    margin-bottom: 14px; padding-bottom: 10px;
+    border-bottom: 2px solid var(--border-lt); color: var(--text-muted);
+  }
+  #todo h3  { color: var(--warning); border-bottom-color: var(--warning); }
+  #doing h3 { color: var(--info);    border-bottom-color: var(--info); }
+  #done h3  { color: var(--success); border-bottom-color: var(--success); }
+  .card { background: var(--surface); padding: 12px 14px; border-radius: var(--radius); margin-bottom: 10px; cursor: pointer; border-left: 4px solid var(--primary); box-shadow: var(--shadow-xs); transition: box-shadow .16s, transform .16s; font-size: 13px; line-height: 1.45; }
+  .card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+  .card b { display: block; margin-bottom: 3px; color: var(--primary-dk); font-size: 13px; }
+  .card-concluido { border-left-color: var(--success) !important; background: #f2fdf5 !important; }
+  .card-atrasado  { border-left-color: var(--danger)  !important; background: #fef8f7 !important; }
+  .card-pendente  { border-left-color: var(--warning) !important; background: #fdfaf0 !important; }
+  .card-andamento { border-left-color: var(--info)    !important; background: #f0f6fd !important; }
 
-    #progress {
-      font-weight: bold;
-      text-align: right;
-      color: #2e6da4;
-      margin-bottom: 10px;
-    }
+  /* ── GANTT ── */
+  #ganttContainer { background: var(--surface); padding: 18px; border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); border: 1px solid var(--border-lt); overflow-x: auto; white-space: nowrap; }
+  .gantt-header { display: flex; border-bottom: 2px solid var(--border); margin-bottom: 4px; }
+  .gantt-header div { width: 30px; text-align: center; font-size: 11px; font-weight: 600; color: var(--text-muted); border-right: 1px solid var(--border-lt); padding: 4px 0; }
+  .gantt-row { position: relative; height: 34px; margin-top: 8px; }
+  .gantt-bar { position: absolute; height: 26px; border-radius: 5px; color: #fff; padding: 4px 7px; font-size: 11px; font-weight: 500; cursor: pointer; transition: opacity .15s; box-shadow: var(--shadow-xs); }
+  .gantt-bar:hover { opacity: .82; }
+  .prioAlta  { background: var(--danger); }
+  .prioMedia { background: var(--warning); }
+  .prioBaixa { background: var(--primary); }
+  .gantt-bar.concluido { background: var(--success) !important; }
 
-    .tr-concluido {
-      background-color: #d4f7df !important;
-    }
-    .tr-pendente {
-      background-color: #fff9db !important;
-    }
-    .tr-andamento {
-      background-color: #e8f4ff !important;
-    }
-    .tr-concluido button,
-    .tr-pendente button,
-    .tr-andamento button {
-      pointer-events: auto !important;
-    }
+  /* ── CALENDÁRIO ── */
+  .cal-nav { display: flex; align-items: center; justify-content: center; gap: 18px; margin-bottom: 18px; }
+  #calMesTexto { font-family: var(--font-d); font-size: 20px; font-weight: 700; color: var(--primary-dk); min-width: 220px; text-align: center; letter-spacing: .5px; }
+  .cal-legenda { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; font-size: 11.5px; align-items: center; padding: 10px 14px; background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border-lt); box-shadow: var(--shadow-xs); }
+  .leg-item { display: flex; align-items: center; gap: 5px; color: var(--text-muted); }
+  .leg-dot  { width: 11px; height: 11px; border-radius: 3px; flex-shrink: 0; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+  .cal-dow { text-align: center; font-family: var(--font-d); font-weight: 700; color: #fff; padding: 8px 2px; background: var(--primary-dk); border-radius: var(--radius); font-size: 12px; letter-spacing: 1.2px; text-transform: uppercase; }
+  .cal-cell { min-height: 95px; background: var(--surface); border: 1px solid var(--border-lt); border-radius: var(--radius); padding: 6px; transition: background .14s; box-shadow: var(--shadow-xs); }
+  .cal-cell.cal-empty { background: #f0f4f8; box-shadow: none; }
+  .cal-cell.cal-weekend { background: #fef8f8; }
+  .cal-cell.cal-today { border: 2px solid var(--primary) !important; background: var(--primary-pale); }
+  .cal-cell.cal-drag-over { background: var(--primary-pale) !important; border: 2px dashed var(--primary) !important; }
+  .cal-day-num { font-weight: 700; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+  .cal-today .cal-day-num { background: var(--primary); color: #fff; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; margin-bottom: 5px; }
+  .cal-event { background: var(--primary); color: #fff; border-radius: 4px; padding: 2px 6px; font-size: 11px; font-weight: 500; margin-bottom: 3px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: opacity .13s, transform .13s; border-left: 3px solid rgba(0,0,0,.15); }
+  .cal-event:hover { opacity: .82; transform: translateX(2px); }
+  .cal-event.ev-done      { background: var(--success) !important; }
+  .cal-event.ev-alta      { background: var(--danger)  !important; }
+  .cal-event.ev-media     { background: var(--warning) !important; }
+  .cal-event.ev-andamento { background: var(--info)    !important; }
 
-    /* ===== FLUXO ===== */
-    #fluxoBoard {
-      display: flex;
-      gap: 20px;
-      padding: 10px;
-    }
+  /* ── FOOTER ── */
+  .app-footer {
+    background: var(--primary-dk); color: rgba(255,255,255,.5);
+    padding: 0 32px; height: 52px;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 12px; letter-spacing: .4px; margin-top: 40px; flex-shrink: 0;
+  }
+  .footer-brand {
+    color: #fff; font-family: var(--font-d); font-size: 14px;
+    font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .footer-brand::before { content: ''; display: inline-block; width: 6px; height: 6px; background: var(--primary-lt); border-radius: 50%; }
+  .footer-center { font-size: 11px; color: rgba(255,255,255,.32); letter-spacing: .8px; }
+  .footer-right { display: flex; align-items: center; gap: 8px; font-size: 11px; }
+  .footer-dot { width: 5px; height: 5px; background: var(--primary-lt); border-radius: 50%; opacity: .5; }
 
-    .coluna {
-      width: 32%;
-      background: white;
-      padding: 10px;
-      border-radius: 8px;
-      box-shadow: 0 0 6px #ccc;
-    }
+  /* ── TOOLTIP DRAG ── */
+  #dragTooltip { position: fixed; background: var(--primary-dk); color: #fff; padding: 5px 12px; border-radius: 5px; font-size: 12px; font-weight: 500; pointer-events: none; display: none; z-index: 9999; box-shadow: var(--shadow-md); }
 
-    .coluna h3 {
-      text-align: center;
-      color: #2e6da4;
-      margin-bottom: 10px;
-      font-weight: bold;
-    }
-
-    .card {
-      background: #e8f1ff;
-      padding: 10px;
-      border-radius: 6px;
-      margin-bottom: 10px;
-      cursor: pointer;
-      border-left: 6px solid #2e6da4;
-    }
-
-    .card-concluido {
-      border-left-color: #2ecc71 !important;
-      background-color: #dbf7e6 !important;
-    }
-
-    .card-atrasado {
-      border-left-color: #e74c3c !important;
-      background-color: #fdecea !important;
-    }
-
-    .card-pendente {
-      border-left-color: #f1c40f !important;
-      background-color: #fff9db !important;
-    }
-
-    .card-andamento {
-      border-left-color: #3498db !important;
-      background-color: #e8f4ff !important;
-    }
-
-    /* ===== GANTT ===== */
-    #ganttContainer {
-      background: white;
-      padding: 15px;
-      border-radius: 10px;
-      box-shadow: 0 0 6px #ccc;
-      overflow-x: auto;
-      white-space: nowrap;
-      margin-top: 20px;
-    }
-
-    .gantt-header {
-      display: flex;
-      border-bottom: 1px solid #ccc;
-    }
-
-    .gantt-header div {
-      width: 30px;
-      text-align: center;
-      border-right: 1px solid #ddd;
-    }
-
-    .gantt-row {
-      position: relative;
-      height: 34px;
-      margin-top: 10px;
-    }
-
-    .gantt-bar {
-      position: absolute;
-      height: 28px;
-      border-radius: 4px;
-      color: white;
-      padding: 4px;
-      font-size: 11px;
-      cursor: pointer;
-    }
-
-    .prioAlta { background-color: #b30000; }
-    .prioMedia { background-color: #d48700; }
-    .prioBaixa { background-color: #2e6da4; }
-
-    .gantt-bar.concluido {
-      background-color: #2ecc71 !important;
-      border: 1px solid #27ae60;
-    }
-
-    .activity-panel table textarea {
-      width: 100%;
-      border: none;
-      background: transparent;
-      font-size: 13px;
-      resize: none;
-      overflow: hidden;
-      min-height: 30px;
-      line-height: 1.35;
-      font-family: Calibri, sans-serif;
-      white-space: pre-wrap;
-      word-break: break-word;
-      box-sizing: border-box;
-      display: block;
-    }
-
-    .activity-panel table input,
-    .activity-panel table select {
-      box-sizing: border-box;
-    }
-
-    td {
-      vertical-align: top;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-    }
-
-    #activityBody td:nth-child(1),
-    #activityBody td:nth-child(8) {
-      text-align: left;
-    }
-
-    #footerApp {
-      margin-top: 24px;
-      padding: 14px 10px 6px;
-      text-align: center;
-      font-size: 13px;
-      color: #5b6b7a;
-      border-top: 1px solid #d9e2ec;
-    }
+  /* ── SCROLL ── */
+  html { scroll-behavior: smooth; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--primary-lt); }
   </style>
 </head>
 
 <body>
 
-<h2>Gerenciador RH – PMO SONOVA</h2>
-
-<div class="menu">
-  <button onclick="openPanel('timelinePanel')">Linha do Tempo</button>
-  <button onclick="openPanel('fluxoPanel')">Fluxo</button>
-  <button onclick="openPanel('ganttPanel')">Gantt</button>
-</div>
-
-<div id="mesAtual"></div>
-
-<!-- ================= TIMELINE ================= -->
-<div id="timelinePanel" class="panel" style="display:block;">
-
-  <div class="timeline" id="timeline"></div>
-  <div id="progress"></div>
-
-  <div class="activity-panel">
-
-    <h3 id="selectedDay"></h3>
-
-    <button onclick="addActivity()">Adicionar Atividade</button>
-    <button onclick="exportToExcel()">Exportar Excel</button>
-    <button onclick="showAllActivities()">Todas as Atividades</button>
-    <button onclick="exportBackup()">Salvar JSON</button>
-    <button onclick="importBackup()">Importar JSON</button>
-
-    <button onclick="setAllActivitiesToPendente()">Voltar para Pendente</button>
-    <button onclick="moveAllWeekendActivitiesToWeekday()">FDS para Semana</button>
-
-    <input type="file" id="importFile" accept=".json" style="display:none"
-           onchange="handleImportFile(event)">
-
-    <table>
-      <thead>
-      <tr>
-        <th>Atividade</th>
-        <th>Responsável</th>
-        <th>Prioridade</th>
-        <th>Status</th>
-        <th>Início</th>
-        <th>Fim</th>
-        <th>Depende</th>
-        <th>Obs</th>
-        <th>Ações</th>
-      </tr>
-      </thead>
-      <tbody id="activityBody"></tbody>
-    </table>
-
+<!-- HEADER -->
+<header class="app-header">
+  <div class="header-brand">
+    <div class="header-sigla">PMO</div>
+    <div>
+      <div class="header-title">Gerenciador RH</div>
+      <div class="header-subtitle">Sonova Brasil · AC Cluster</div>
+    </div>
   </div>
-</div>
+  <div class="header-mes" id="mesAtual"></div>
+</header>
 
-<!-- ================= FLUXO ================= -->
-<div id="fluxoPanel" class="panel">
-  <h2>Fluxo de Atividades</h2>
+<!-- NAV -->
+<nav class="app-nav">
+  <button class="nav-btn active" id="nav-timelinePanel" onclick="openPanel('timelinePanel')">📆 Linha do Tempo</button>
+  <button class="nav-btn" id="nav-fluxoPanel"    onclick="openPanel('fluxoPanel')">🔄 Fluxo</button>
+  <button class="nav-btn" id="nav-ganttPanel"    onclick="openPanel('ganttPanel')">📊 Gantt</button>
+  <button class="nav-btn" id="nav-calendarioPanel" onclick="openPanel('calendarioPanel')">📅 Calendário</button>
+</nav>
 
-  <input type="text" id="searchFluxo"
-         placeholder="Pesquisar..."
-         style="padding:10px; width:50%; margin-bottom:15px;
-                border-radius:5px; border:1px solid #ccc;"
-         onkeyup="filterFluxo()">
+<div class="app-content">
+  <div id="dragTooltip">↕ Arrastando atividade…</div>
 
-  <div id="fluxoBoard">
-    <div class="coluna" id="todo"><h3>Pendente</h3></div>
-    <div class="coluna" id="doing"><h3>Em andamento</h3></div>
-    <div class="coluna" id="done"><h3>Concluído</h3></div>
+  <!-- TIMELINE -->
+  <div id="timelinePanel" class="panel" style="display:block;">
+    <div class="section-head">
+      <h2>Linha do Tempo</h2>
+      <div class="section-divider"></div>
+    </div>
+
+    <div class="timeline" id="timeline"></div>
+
+    <div class="progress-wrap">
+      <div class="progress-label" id="progressLabel">Progresso: –</div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progressFill" style="width:0%"></div>
+      </div>
+      <div class="progress-pct" id="progressPct">0%</div>
+    </div>
+
+    <div class="activity-panel">
+      <div class="panel-heading">
+        <span>📋</span>
+        <span id="selectedDay">—</span>
+      </div>
+
+      <div class="toolbar">
+        <button class="btn btn-primary" onclick="addActivity()">＋ Adicionar</button>
+        <div class="toolbar-sep"></div>
+        <button class="btn btn-success" onclick="exportToExcel()">📤 Exportar Excel</button>
+        <button class="btn btn-outline" onclick="showAllActivities()">📋 Todas</button>
+        <div class="toolbar-sep"></div>
+        <button class="btn btn-ghost" onclick="exportBackup()">💾 Salvar JSON</button>
+        <button class="btn btn-ghost" onclick="importBackup()">📂 Importar JSON</button>
+        <div class="toolbar-sep"></div>
+        <button class="btn btn-warning" onclick="setAllActivitiesToPendente()">↩ Pendente</button>
+        <button class="btn btn-info"    onclick="moveAllWeekendActivitiesToWeekday()">📅 FDS → Semana</button>
+      </div>
+
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="handleImportFile(event)">
+
+      <div class="hint-bar">
+        💡 Arraste uma linha até um círculo de dia ou outra linha para mover/reordenar. Clique em 📋 para marcar no Calendário.
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:22%">Atividade</th>
+              <th style="width:10%">Responsável</th>
+              <th style="width:8%">Prioridade</th>
+              <th style="width:9%">Status</th>
+              <th style="width:8%">Início</th>
+              <th style="width:8%">Fim</th>
+              <th style="width:8%">Depende</th>
+              <th style="width:14%">Obs</th>
+              <th style="width:4%" title="Calendário">📅</th>
+              <th style="width:9%">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="activityBody"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
-</div>
 
-<!-- ================= GANTT ================= -->
-<div id="ganttPanel" class="panel">
-  <h2>Diagrama de Gantt</h2>
-  <div id="ganttContainer"></div>
-</div>
+  <!-- FLUXO -->
+  <div id="fluxoPanel" class="panel">
+    <div class="section-head"><h2>Fluxo de Atividades</h2><div class="section-divider"></div></div>
+    <input type="text" id="searchFluxo" class="fluxo-search" placeholder="🔍  Pesquisar atividades…" onkeyup="filterFluxo()">
+    <div id="fluxoBoard">
+      <div class="coluna" id="todo"><h3>Pendente</h3></div>
+      <div class="coluna" id="doing"><h3>Em andamento</h3></div>
+      <div class="coluna" id="done"><h3>Concluído</h3></div>
+    </div>
+  </div>
+
+  <!-- GANTT -->
+  <div id="ganttPanel" class="panel">
+    <div class="section-head"><h2>Diagrama de Gantt</h2><div class="section-divider"></div></div>
+    <div id="ganttContainer"></div>
+  </div>
+
+  <!-- CALENDÁRIO -->
+  <div id="calendarioPanel" class="panel">
+    <div class="section-head"><h2>Calendário de Atividades</h2><div class="section-divider"></div></div>
+    <div class="cal-nav">
+      <button class="btn btn-outline" onclick="calNavegar(-1)">&#8249; Anterior</button>
+      <span id="calMesTexto"></span>
+      <button class="btn btn-outline" onclick="calNavegar(1)">Próximo &#8250;</button>
+    </div>
+    <div class="cal-legenda">
+      <strong style="color:var(--text-muted);font-size:11px;letter-spacing:.5px;">LEGENDA</strong>
+      <span class="leg-item"><span class="leg-dot" style="background:var(--primary)"></span> Baixa</span>
+      <span class="leg-item"><span class="leg-dot" style="background:var(--warning)"></span> Média</span>
+      <span class="leg-item"><span class="leg-dot" style="background:var(--danger)"></span> Alta</span>
+      <span class="leg-item"><span class="leg-dot" style="background:var(--info)"></span> Em andamento</span>
+      <span class="leg-item"><span class="leg-dot" style="background:var(--success)"></span> Concluído</span>
+      <span style="margin-left:8px;color:var(--text-light);">📅 = marcada via Linha do Tempo</span>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+  </div>
+
+</div><!-- /.app-content -->
+
+<!-- FOOTER -->
+<footer class="app-footer">
+  <div class="footer-brand">Anderson Marinho · Igarapé Digital</div>
+  <div class="footer-center">Gerenciador RH – PMO SONOVA</div>
+  <div class="footer-right">
+    <span>RH · DP · Jurídico</span>
+    <div class="footer-dot"></div>
+    <span id="footerAno"></span>
+  </div>
+</footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
 <script>
 let activityData = JSON.parse(localStorage.getItem("activityData")) || {};
+let dragSource = null;
+let calAno = new Date().getFullYear();
+let calMes = new Date().getMonth();
 
-function autoResizeTextarea(el){
-  if(!el) return;
-  el.style.height = "auto";
-  el.style.height = el.scrollHeight + "px";
-}
+function autoResizeTextarea(el){ if(!el) return; el.style.height="auto"; el.style.height=el.scrollHeight+"px"; }
+function autoResizeAllTextareas(){ document.querySelectorAll("textarea").forEach(t=>autoResizeTextarea(t)); }
 
-function autoResizeAllTextareas(){
-  document.querySelectorAll("textarea").forEach(t=>autoResizeTextarea(t));
-}
-
-function saveData() {
+function saveData(){
   localStorage.setItem("activityData", JSON.stringify(activityData));
-  updateProgress();
-  updateDaysColors();
-  verificarAtrasos();
-  renderFluxo();
-  renderGantt();
+  updateProgress(); updateDaysColors(); verificarAtrasos(); renderFluxo(); renderGantt();
 }
 
-function updateMesTexto() {
-  const now = new Date();
-  const meses = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho",
-  "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
-
-  document.getElementById("mesAtual").innerText =
-    `${meses[now.getMonth()]} de ${now.getFullYear()}`;
-}
-
-function getDaysInMonth(y,m){return new Date(y,m+1,0).getDate();}
-
-function createTimeline() {
-  const timeline=document.getElementById("timeline");
+function updateMesTexto(){
   const now=new Date();
-  const y=now.getFullYear();
-  const m=now.getMonth();
+  const meses=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+  document.getElementById("mesAtual").innerText=`${meses[now.getMonth()]} de ${now.getFullYear()}`;
+  document.getElementById("footerAno").innerText=now.getFullYear();
+}
+
+function getDaysInMonth(y,m){ return new Date(y,m+1,0).getDate(); }
+
+function createTimeline(){
+  const timeline=document.getElementById("timeline");
+  const now=new Date(); const y=now.getFullYear(); const m=now.getMonth();
   const total=getDaysInMonth(y,m);
-
   timeline.innerHTML="";
-
   for(let i=1;i<=total;i++){
-    const dt=new Date(y,m,i);
-    const dow=dt.getDay();
+    const dt=new Date(y,m,i); const dow=dt.getDay();
     const div=document.createElement("div");
-
-    div.classList.add("day");
-    div.innerText=i;
-
+    div.classList.add("day"); div.innerText=i;
     if(dow===6) div.classList.add("saturday");
     if(dow===0) div.classList.add("sunday");
-
     div.onclick=()=>showDay(i);
+    div.ondragover=e=>{e.preventDefault();div.classList.add("drag-target");};
+    div.ondragleave=()=>div.classList.remove("drag-target");
+    div.ondrop=e=>{e.preventDefault();div.classList.remove("drag-target");dropOnDayCircle(i);};
     timeline.appendChild(div);
   }
 }
 
 function updateDaysColors(){
   document.querySelectorAll(".day").forEach(el=>{
-    const dia=parseInt(el.innerText);
-    const list=activityData[dia]||[];
-
+    const dia=parseInt(el.innerText); const list=activityData[dia]||[];
     el.classList.remove("concluido");
-
-    if(list.length>0 && list.every(a=>a.status==="Concluído")){
-      el.classList.add("concluido");
-    }
+    if(list.length>0&&list.every(a=>a.status==="Concluído")) el.classList.add("concluido");
   });
 }
 
@@ -470,283 +581,216 @@ function showDay(day){
   const body=document.getElementById("activityBody");
   document.getElementById("selectedDay").innerText=`Dia ${day}`;
   body.innerHTML="";
-
   if(!activityData[day]) activityData[day]=[];
-
-  activityData[day].forEach((a,i)=>{
-    const tr=document.createElement("tr");
-    if(a.status==="Concluído"){ tr.classList.add("tr-concluido"); }
-    else if(a.status==="Pendente"){ tr.classList.add("tr-pendente"); }
-    else if(a.status==="Em andamento"){ tr.classList.add("tr-andamento"); }
-    else if(a.status==="Pendente"){ tr.classList.add("tr-pendente"); }
-    else if(a.status==="Em andamento"){ tr.classList.add("tr-andamento"); }
-
-    tr.innerHTML=`
-      <td><textarea oninput="autoResizeTextarea(this); updateField(${day},${i},'text',this.value)" onchange="updateField(${day},${i},'text',this.value)">${a.text||""}</textarea></td>
-      <td><input value="${a.responsavel||""}" onchange="updateField(${day},${i},'responsavel',this.value)"></td>
-
-      <td>
-        <select onchange="updateField(${day},${i},'prioridade',this.value)">
-          <option ${a.prioridade==="Alta"?'selected':''}>Alta</option>
-          <option ${a.prioridade==="Média"?'selected':''}>Média</option>
-          <option ${a.prioridade==="Baixa"?'selected':''}>Baixa</option>
-        </select>
-      </td>
-
-      <td>
-        <select onchange="updateField(${day},${i},'status',this.value)">
-          <option ${a.status==="Pendente"?'selected':''}>Pendente</option>
-          <option ${a.status==="Em andamento"?'selected':''}>Em andamento</option>
-          <option ${a.status==="Concluído"?'selected':''}>Concluído</option>
-        </select>
-      </td>
-
-      <td><input type="date" value="${a.inicio||""}" onchange="updateField(${day},${i},'inicio',this.value)"></td>
-      <td><input type="date" value="${a.fim||""}" onchange="updateField(${day},${i},'fim',this.value)"></td>
-      <td><input value="${a.depende||""}" onchange="updateField(${day},${i},'depende',this.value)"></td>
-      <td><textarea oninput="autoResizeTextarea(this); updateField(${day},${i},'obs',this.value)" onchange="updateField(${day},${i},'obs',this.value)">${a.obs||""}</textarea></td>
-
-      <td>
-        <button class="action-btn move-btn" onclick="moveActivity(${day},${i})">Mover</button>
-        <button class="action-btn delete-btn" onclick="deleteActivity(${day},${i})">Excluir</button>
-      </td>
-    `;
-    body.appendChild(tr);
-  });
-
-  setTimeout(autoResizeAllTextareas, 0);
+  activityData[day].forEach((a,i)=>body.appendChild(buildRow(day,i,a)));
+  setTimeout(autoResizeAllTextareas,0);
   saveData();
 }
 
-/* ===== UPDATE FIELD ===== */
+function showAllActivities(){
+  const body=document.getElementById("activityBody");
+  document.getElementById("selectedDay").innerText="Todas as Atividades";
+  body.innerHTML="";
+  Object.keys(activityData).sort((a,b)=>Number(a)-Number(b)).forEach(day=>{
+    activityData[day].forEach((a,i)=>body.appendChild(buildRow(day,i,a)));
+  });
+  setTimeout(autoResizeAllTextareas,0);
+}
+
+function buildRow(day,i,a){
+  const tr=document.createElement("tr");
+  tr.draggable=true;
+  if(a.status==="Concluído")         tr.classList.add("tr-concluido");
+  else if(a.status==="Pendente")     tr.classList.add("tr-pendente");
+  else if(a.status==="Em andamento") tr.classList.add("tr-andamento");
+
+  tr.addEventListener("dragstart",e=>{
+    dragSource={day:Number(day),index:i};
+    tr.classList.add("dragging-row");
+    e.dataTransfer.effectAllowed="move";
+    document.getElementById("dragTooltip").style.display="block";
+  });
+  tr.addEventListener("dragend",()=>{
+    tr.classList.remove("dragging-row");
+    document.getElementById("dragTooltip").style.display="none";
+    document.querySelectorAll(".drag-over-row").forEach(r=>r.classList.remove("drag-over-row"));
+  });
+  tr.addEventListener("dragover",e=>{
+    e.preventDefault();
+    document.querySelectorAll(".drag-over-row").forEach(r=>r.classList.remove("drag-over-row"));
+    tr.classList.add("drag-over-row");
+  });
+  tr.addEventListener("dragleave",()=>tr.classList.remove("drag-over-row"));
+  tr.addEventListener("drop",e=>{e.preventDefault();tr.classList.remove("drag-over-row");dropOnRow(Number(day),i);});
+
+  const noCalChecked=a.noCalendario?"ativo":"inativo";
+  const noCalIcon=a.noCalendario?"📅":"📋";
+
+  tr.innerHTML=`
+    <td><textarea oninput="autoResizeTextarea(this);updateField(${day},${i},'text',this.value)"
+                  onchange="updateField(${day},${i},'text',this.value)">${a.text||""}</textarea></td>
+    <td><input value="${escHtml(a.responsavel||"")}" onchange="updateField(${day},${i},'responsavel',this.value)"></td>
+    <td><select onchange="updateField(${day},${i},'prioridade',this.value)">
+      <option ${a.prioridade==="Alta"?"selected":""}>Alta</option>
+      <option ${a.prioridade==="Média"?"selected":""}>Média</option>
+      <option ${a.prioridade==="Baixa"?"selected":""}>Baixa</option>
+    </select></td>
+    <td><select onchange="updateField(${day},${i},'status',this.value)">
+      <option ${a.status==="Pendente"?"selected":""}>Pendente</option>
+      <option ${a.status==="Em andamento"?"selected":""}>Em andamento</option>
+      <option ${a.status==="Concluído"?"selected":""}>Concluído</option>
+    </select></td>
+    <td><input type="date" value="${a.inicio||""}" onchange="updateField(${day},${i},'inicio',this.value)"></td>
+    <td><input type="date" value="${a.fim||""}"   onchange="updateField(${day},${i},'fim',this.value)"></td>
+    <td><input value="${escHtml(a.depende||"")}"  onchange="updateField(${day},${i},'depende',this.value)"></td>
+    <td><textarea oninput="autoResizeTextarea(this);updateField(${day},${i},'obs',this.value)"
+                  onchange="updateField(${day},${i},'obs',this.value)">${a.obs||""}</textarea></td>
+    <td><span class="flag-cal ${noCalChecked}"
+              title="${a.noCalendario?"Remover do calendário":"Adicionar ao calendário"}"
+              onclick="toggleCalFlag(${day},${i},this)">${noCalIcon}</span></td>
+    <td>
+      <button class="action-btn move-btn"   onclick="moveActivity(${day},${i})">↗ Mover</button>
+      <button class="action-btn delete-btn" onclick="deleteActivity(${day},${i})">✕ Excluir</button>
+    </td>`;
+  return tr;
+}
+
+function escHtml(s){
+  return String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+function toggleCalFlag(day,index,el){
+  const atv=activityData[day][index];
+  atv.noCalendario=!atv.noCalendario;
+  el.textContent=atv.noCalendario?"📅":"📋";
+  el.className="flag-cal "+(atv.noCalendario?"ativo":"inativo");
+  el.title=atv.noCalendario?"Remover do calendário":"Adicionar ao calendário";
+  saveData();
+}
+
 function updateField(day,index,field,value){
   activityData[day][index][field]=value;
   saveData();
   if(field==="status") showDay(day);
 }
 
-/* ===== ADICIONAR ATIVIDADE ===== */
+function dropOnRow(toDay,toIndex){
+  if(!dragSource) return;
+  const fromDay=dragSource.day; const fromIndex=dragSource.index;
+  if(fromDay===toDay&&fromIndex===toIndex){dragSource=null;return;}
+  const atv=activityData[fromDay][fromIndex];
+  if(fromDay!==toDay) atv.obs=(atv.obs||"")+` [Movida do dia ${fromDay} → ${toDay} via drag]`;
+  if(!activityData[toDay]) activityData[toDay]=[];
+  activityData[toDay].splice(toIndex,0,atv);
+  let removeIdx=fromIndex;
+  if(fromDay===toDay&&fromIndex>=toIndex) removeIdx++;
+  activityData[fromDay].splice(removeIdx,1);
+  if(activityData[fromDay].length===0) delete activityData[fromDay];
+  dragSource=null; saveData();
+  const titulo=document.getElementById("selectedDay").innerText;
+  if(titulo.startsWith("Dia ")) showDay(toDay); else showAllActivities();
+}
+
+function dropOnDayCircle(toDay){
+  if(!dragSource) return;
+  const fromDay=dragSource.day; const fromIndex=dragSource.index;
+  if(fromDay===toDay){dragSource=null;return;}
+  const atv=activityData[fromDay][fromIndex];
+  atv.obs=(atv.obs||"")+` [Movida do dia ${fromDay} → ${toDay} via drag]`;
+  if(!activityData[toDay]) activityData[toDay]=[];
+  activityData[toDay].push(atv);
+  activityData[fromDay].splice(fromIndex,1);
+  if(activityData[fromDay].length===0) delete activityData[fromDay];
+  dragSource=null; saveData(); showDay(toDay);
+}
+
+function dropOnCalCell(toDay){
+  if(!dragSource) return;
+  const fromDay=dragSource.day; const fromIndex=dragSource.index;
+  if(fromDay===toDay){dragSource=null;renderCalendario();return;}
+  const atv=activityData[fromDay][fromIndex];
+  atv.obs=(atv.obs||"")+` [Movida do dia ${fromDay} → ${toDay} via calendário]`;
+  if(!activityData[toDay]) activityData[toDay]=[];
+  activityData[toDay].push(atv);
+  activityData[fromDay].splice(fromIndex,1);
+  if(activityData[fromDay].length===0) delete activityData[fromDay];
+  dragSource=null; saveData(); renderCalendario();
+}
+
 function addActivity(){
   let texto=document.getElementById("selectedDay").innerText.trim();
   let day=null;
-
   if(texto.startsWith("Dia ")) day=parseInt(texto.replace("Dia ",""));
   else if(texto==="Todas as Atividades") day=parseInt(prompt("Dia (1-31):"));
-
-  if(!day || isNaN(day)) day=new Date().getDate();
-
+  if(!day||isNaN(day)) day=new Date().getDate();
   if(!activityData[day]) activityData[day]=[];
-
-  activityData[day].push({
-    id: crypto.randomUUID(),
-    text:"",
-    responsavel:"",
-    prioridade:"Média",
-    status:"Pendente",
-    inicio:"",
-    fim:"",
-    depende:"",
-    obs:""
-  });
-
-  saveData();
-  showDay(day);
+  activityData[day].unshift({id:crypto.randomUUID(),text:"",responsavel:"",prioridade:"Média",status:"Pendente",inicio:"",fim:"",depende:"",obs:"",noCalendario:false});
+  saveData(); showDay(day);
 }
 
-/* ===== EXCLUIR ===== */
 function deleteActivity(day,index){
   if(!confirm("Excluir esta atividade?")) return;
-
   activityData[day].splice(index,1);
   if(activityData[day].length===0) delete activityData[day];
-
   saveData();
-
-  let titulo=document.getElementById("selectedDay").innerText;
-  if(titulo.startsWith("Dia ")) showDay(day);
-  else showAllActivities();
+  const titulo=document.getElementById("selectedDay").innerText;
+  if(titulo.startsWith("Dia ")) showDay(day); else showAllActivities();
 }
 
-/* ============================================================
-   NOVO BOTÃO TOPO: VOLTAR TODAS AS ATIVIDADES DO DIA PARA PENDENTE
-   ============================================================ */
 function setAllActivitiesToPendente(){
-  const titulo = document.getElementById("selectedDay").innerText.trim();
-
-  if(!titulo.startsWith("Dia ")){
-    alert("Selecione um dia na Linha do Tempo para aplicar em lote.");
-    return;
-  }
-
-  const day = parseInt(titulo.replace("Dia ",""));
-  if(!activityData[day] || activityData[day].length === 0){
-    alert("Não há atividades neste dia.");
-    return;
-  }
-
-  activityData[day].forEach(a=>{
-    a.status = "Pendente";
-  });
-
-  saveData();
-  showDay(day);
+  const titulo=document.getElementById("selectedDay").innerText.trim();
+  if(!titulo.startsWith("Dia ")){alert("Selecione um dia na Linha do Tempo.");return;}
+  const day=parseInt(titulo.replace("Dia ",""));
+  if(!activityData[day]||activityData[day].length===0){alert("Não há atividades neste dia.");return;}
+  activityData[day].forEach(a=>{a.status="Pendente";}); saveData(); showDay(day);
 }
 
-/* ============================================================
-   NOVO BOTÃO TOPO: MOVER TODAS AS ATIVIDADES DO DIA PARA UM DIA ÚTIL
-   - Usuário escolhe o dia destino (1-31)
-   - Valida se o destino é dia útil (seg-sex)
-   ============================================================ */
 function moveAllWeekendActivitiesToWeekday(){
-  const titulo = document.getElementById("selectedDay").innerText.trim();
-
-  if(!titulo.startsWith("Dia ")){
-    alert("Selecione um dia na Linha do Tempo para aplicar em lote.");
-    return;
-  }
-
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = now.getMonth();
-  const total = getDaysInMonth(y, m);
-
-  const day = parseInt(titulo.replace("Dia ",""));
-
-  if(!activityData[day] || activityData[day].length === 0){
-    alert("Não há atividades neste dia.");
-    return;
-  }
-
-  const dt = new Date(y, m, day);
-  const dow = dt.getDay(); // 0 domingo, 6 sábado
-
-  if(dow !== 6 && dow !== 0){
-    alert("O dia selecionado não é sábado/domingo.");
-    return;
-  }
-
-  const alvo = parseInt(prompt("Para qual dia útil (1-" + total + ") deseja mover TODAS as atividades deste dia?"));
-  if(!alvo || isNaN(alvo) || alvo < 1 || alvo > total) return;
-
-  const dtAlvo = new Date(y, m, alvo);
-  const dowAlvo = dtAlvo.getDay(); // 0 domingo, 6 sábado
-
-  if(dowAlvo === 0 || dowAlvo === 6){
-    alert("O dia destino precisa ser dia útil (segunda a sexta).");
-    return;
-  }
-
-  if(!activityData[alvo]) activityData[alvo] = [];
-
-  const moved = activityData[day].map(atv=>{
-    atv.obs = (atv.obs || "") + " [Movida em lote do dia " + day + " para " + alvo + "]";
-    return atv;
-  });
-
-  activityData[alvo].push(...moved);
-  delete activityData[day];
-
-  saveData();
-  showDay(alvo);
+  const titulo=document.getElementById("selectedDay").innerText.trim();
+  if(!titulo.startsWith("Dia ")){alert("Selecione um dia na Linha do Tempo.");return;}
+  const now=new Date(); const y=now.getFullYear(); const m=now.getMonth();
+  const total=getDaysInMonth(y,m);
+  const day=parseInt(titulo.replace("Dia ",""));
+  if(!activityData[day]||activityData[day].length===0){alert("Não há atividades neste dia.");return;}
+  const dt=new Date(y,m,day); const dow=dt.getDay();
+  if(dow!==6&&dow!==0){alert("O dia selecionado não é sábado/domingo.");return;}
+  const alvo=parseInt(prompt(`Para qual dia útil (1-${total}) deseja mover TODAS as atividades deste dia?`));
+  if(!alvo||isNaN(alvo)||alvo<1||alvo>total) return;
+  const dtAlvo=new Date(y,m,alvo); const dowAlvo=dtAlvo.getDay();
+  if(dowAlvo===0||dowAlvo===6){alert("O dia destino precisa ser dia útil (segunda a sexta).");return;}
+  if(!activityData[alvo]) activityData[alvo]=[];
+  const moved=activityData[day].map(atv=>{atv.obs=(atv.obs||"")+` [Movida em lote do dia ${day} para ${alvo}]`;return atv;});
+  activityData[alvo].push(...moved); delete activityData[day];
+  saveData(); showDay(alvo);
 }
 
-/* ===== MOVER ===== */
 function moveActivity(day,index){
   const novo=parseInt(prompt("Mover para qual dia?"));
-  if(!novo || isNaN(novo)) return;
-
+  if(!novo||isNaN(novo)) return;
   if(!activityData[novo]) activityData[novo]=[];
-
   const atv=activityData[day][index];
-  atv.obs=(atv.obs||"")+" [Movida do dia "+day+"]";
-
-  activityData[novo].push(atv);
-  activityData[day].splice(index,1);
-
+  atv.obs=(atv.obs||"")+` [Movida do dia ${day}]`;
+  activityData[novo].push(atv); activityData[day].splice(index,1);
   if(activityData[day].length===0) delete activityData[day];
-
-  saveData();
-  showDay(novo);
+  saveData(); showDay(novo);
 }
 
-/* ===== TODAS ATIVIDADES ===== */
-function showAllActivities(){
-  const body=document.getElementById("activityBody");
-  document.getElementById("selectedDay").innerText="Todas as Atividades";
-  body.innerHTML="";
-
-  Object.keys(activityData).sort((a,b)=>Number(a)-Number(b)).forEach(day=>{
-    activityData[day].forEach((a,i)=>{
-      const tr=document.createElement("tr");
-      if(a.status==="Concluído"){ tr.classList.add("tr-concluido"); }
-
-      tr.innerHTML=`
-      <td><textarea oninput="autoResizeTextarea(this); updateField(${day},${i},'text',this.value)" onchange="updateField(${day},${i},'text',this.value)">${a.text||""}</textarea></td>
-      <td><input value="${a.responsavel||""}" onchange="updateField(${day},${i},'responsavel',this.value)"></td>
-
-      <td>
-        <select onchange="updateField(${day},${i},'prioridade',this.value)">
-          <option ${a.prioridade==='Alta'?'selected':''}>Alta</option>
-          <option ${a.prioridade==='Média'?'selected':''}>Média</option>
-          <option ${a.prioridade==='Baixa'?'selected':''}>Baixa</option>
-        </select>
-      </td>
-
-      <td>
-        <select onchange="updateField(${day},${i},'status',this.value)">
-          <option ${a.status==='Pendente'?'selected':''}>Pendente</option>
-          <option ${a.status==='Em andamento'?'selected':''}>Em andamento</option>
-          <option ${a.status==='Concluído'?'selected':''}>Concluído</option>
-        </select>
-      </td>
-
-      <td><input type="date" value="${a.inicio||""}" onchange="updateField(${day},${i},'inicio',this.value)"></td>
-      <td><input type="date" value="${a.fim||""}" onchange="updateField(${day},${i},'fim',this.value)"></td>
-      <td><input value="${a.depende||""}" onchange="updateField(${day},${i},'depende',this.value)"></td>
-      <td><textarea oninput="autoResizeTextarea(this); updateField(${day},${i},'obs',this.value)" onchange="updateField(${day},${i},'obs',this.value)">${a.obs||""}</textarea></td>
-
-      <td>
-        <button class="action-btn move-btn" onclick="moveActivity(${day},${i})">Mover</button>
-        <button class="action-btn delete-btn" onclick="deleteActivity(${day},${i})">Excluir</button>
-      </td>`;
-      body.appendChild(tr);
-    });
-  });
-
-  setTimeout(autoResizeAllTextareas, 0);
-}
-
-/* ===== FLUXO (KANBAN) ===== */
 function renderFluxo(){
   const todo=document.getElementById("todo");
   const doing=document.getElementById("doing");
   const done=document.getElementById("done");
-
   todo.innerHTML="<h3>Pendente</h3>";
   doing.innerHTML="<h3>Em andamento</h3>";
   done.innerHTML="<h3>Concluído</h3>";
-
   Object.keys(activityData).forEach(day=>{
     activityData[day].forEach(a=>{
-      const card=document.createElement("div");
-      card.classList.add("card");
-
-      if(a.status==="Concluído") card.classList.add("card-concluido");
-      else if(a.atrasada) card.classList.add("card-atrasado");
+      const card=document.createElement("div"); card.classList.add("card");
+      if(a.status==="Concluído")         card.classList.add("card-concluido");
+      else if(a.atrasada)                card.classList.add("card-atrasado");
       else if(a.status==="Em andamento") card.classList.add("card-andamento");
-      else if(a.status==="Pendente") card.classList.add("card-pendente");
-
-      card.innerHTML=`
-        <b>${a.text||""}</b><br>
-        Dia: ${day}<br>
-        ${a.inicio||""} → ${a.fim||""}
-      `;
-
-      card.onclick=()=>{
-        openPanel("timelinePanel");
-        showDay(day);
-      };
-
+      else if(a.status==="Pendente")     card.classList.add("card-pendente");
+      card.innerHTML=`<b>${a.text||""}</b>Dia: ${day} · ${a.inicio||"—"} → ${a.fim||"—"}`;
+      card.onclick=()=>{openPanel("timelinePanel");showDay(day);};
       if(a.status==="Pendente") todo.appendChild(card);
       else if(a.status==="Em andamento") doing.appendChild(card);
       else done.appendChild(card);
@@ -761,107 +805,99 @@ function filterFluxo(){
   });
 }
 
-/* ===== GANTT ===== */
 function renderGantt(){
-  const container=document.getElementById("ganttContainer");
-  container.innerHTML="";
-
-  const now=new Date();
-  const y=now.getFullYear();
-  const m=now.getMonth();
-  const total=getDaysInMonth(y,m);
-  const dayWidth=30;
-
-  const header=document.createElement("div");
-  header.classList.add("gantt-header");
-
-  for(let d=1;d<=total;d++){
-    const div=document.createElement("div");
-    div.innerText=d;
-    header.appendChild(div);
-  }
+  const container=document.getElementById("ganttContainer"); container.innerHTML="";
+  const now=new Date(); const y=now.getFullYear(); const m=now.getMonth();
+  const total=getDaysInMonth(y,m); const dayWidth=30;
+  const header=document.createElement("div"); header.classList.add("gantt-header");
+  for(let d=1;d<=total;d++){const div=document.createElement("div");div.innerText=d;header.appendChild(div);}
   container.appendChild(header);
-
   Object.keys(activityData).forEach(day=>{
     activityData[day].forEach(a=>{
-      if(!a.inicio || !a.fim) return;
-
-      const inicio=new Date(a.inicio);
-      const fim=new Date(a.fim);
-
-      if(inicio.getMonth()!==m && fim.getMonth()!==m) return;
-
-      const row=document.createElement("div");
-      row.classList.add("gantt-row");
-
-      const bar=document.createElement("div");
-      bar.classList.add("gantt-bar");
-
-      if(a.status==="Concluído") bar.classList.add("concluido");
-      else if(a.prioridade==="Alta") bar.classList.add("prioAlta");
+      if(!a.inicio||!a.fim) return;
+      const inicio=new Date(a.inicio); const fim=new Date(a.fim);
+      if(inicio.getMonth()!==m&&fim.getMonth()!==m) return;
+      const row=document.createElement("div"); row.classList.add("gantt-row");
+      const bar=document.createElement("div"); bar.classList.add("gantt-bar");
+      if(a.status==="Concluído")      bar.classList.add("concluido");
+      else if(a.prioridade==="Alta")  bar.classList.add("prioAlta");
       else if(a.prioridade==="Média") bar.classList.add("prioMedia");
       else bar.classList.add("prioBaixa");
-
-      const start=inicio.getDate();
-      const end=fim.getDate();
-
-      bar.style.left=(start-1)*dayWidth+"px";
-      bar.style.width=(end-start+1)*dayWidth+"px";
-      bar.innerText=a.text||"";
-      bar.title=a.text||"";
-
-      bar.onclick=()=>{
-        openPanel("timelinePanel");
-        showDay(day);
-      };
-
-      row.appendChild(bar);
-      container.appendChild(row);
+      const start=inicio.getDate(); const end=fim.getDate();
+      bar.style.left=(start-1)*dayWidth+"px"; bar.style.width=(end-start+1)*dayWidth+"px";
+      bar.innerText=a.text||""; bar.title=a.text||"";
+      bar.onclick=()=>{openPanel("timelinePanel");showDay(day);};
+      row.appendChild(bar); container.appendChild(row);
     });
   });
 }
 
-/* ===== PROGRESSO ===== */
+function calNavegar(delta){
+  calMes+=delta;
+  if(calMes<0){calMes=11;calAno--;} if(calMes>11){calMes=0;calAno++;}
+  renderCalendario();
+}
+
+function renderCalendario(){
+  const meses=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+  document.getElementById("calMesTexto").innerText=`${meses[calMes]} de ${calAno}`;
+  const grid=document.getElementById("calGrid"); grid.innerHTML="";
+  ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"].forEach(d=>{
+    const h=document.createElement("div"); h.className="cal-dow"; h.innerText=d; grid.appendChild(h);
+  });
+  const primeiroDow=new Date(calAno,calMes,1).getDay();
+  const totalDias=getDaysInMonth(calAno,calMes);
+  const hoje=new Date();
+  for(let i=0;i<primeiroDow;i++){const e=document.createElement("div");e.className="cal-cell cal-empty";grid.appendChild(e);}
+  for(let d=1;d<=totalDias;d++){
+    const cell=document.createElement("div"); cell.className="cal-cell";
+    const dow=new Date(calAno,calMes,d).getDay();
+    if(dow===0||dow===6) cell.classList.add("cal-weekend");
+    if(d===hoje.getDate()&&calMes===hoje.getMonth()&&calAno===hoje.getFullYear()) cell.classList.add("cal-today");
+    const num=document.createElement("div"); num.className="cal-day-num"; num.innerText=d; cell.appendChild(num);
+    (activityData[d]||[]).filter(a=>a.noCalendario).forEach(a=>{
+      const ev=document.createElement("div"); ev.className="cal-event";
+      if(a.status==="Concluído")         ev.classList.add("ev-done");
+      else if(a.prioridade==="Alta")     ev.classList.add("ev-alta");
+      else if(a.prioridade==="Média")    ev.classList.add("ev-media");
+      else if(a.status==="Em andamento") ev.classList.add("ev-andamento");
+      ev.innerText=a.text||"(sem título)"; ev.title=`${a.text} | ${a.responsavel||"—"} | ${a.status}`;
+      ev.onclick=e=>{e.stopPropagation();openPanel("timelinePanel");showDay(d);};
+      cell.appendChild(ev);
+    });
+    cell.ondragover=e=>{e.preventDefault();cell.classList.add("cal-drag-over");};
+    cell.ondragleave=()=>cell.classList.remove("cal-drag-over");
+    cell.ondrop=e=>{e.preventDefault();cell.classList.remove("cal-drag-over");dropOnCalCell(d);};
+    grid.appendChild(cell);
+  }
+}
+
 function updateProgress(){
   let total=0,done=0;
-  Object.keys(activityData).forEach(day=>{
-    activityData[day].forEach(a=>{
-      total++;
-      if(a.status==="Concluído") done++;
-    });
-  });
-
+  Object.keys(activityData).forEach(day=>{activityData[day].forEach(a=>{total++;if(a.status==="Concluído")done++;});});
   const pct=total?((done/total)*100).toFixed(1):0;
-  document.getElementById("progress").innerText=
-    `Progresso: ${pct}% (${done}/${total})`;
+  document.getElementById("progressLabel").innerText=`Progresso: ${done} de ${total} concluída${total!==1?"s":""}`;
+  document.getElementById("progressFill").style.width=pct+"%";
+  document.getElementById("progressPct").innerText=pct+"%";
 }
 
-/* ===== ATRASOS ===== */
 function verificarAtrasos(){
   const hoje=new Date();
   Object.keys(activityData).forEach(day=>{
     activityData[day].forEach(a=>{
-      if(a.fim && a.status!=="Concluído"){
-        const f=new Date(a.fim);
-        a.atrasada=f<hoje;
-      } else a.atrasada=false;
+      if(a.fim&&a.status!=="Concluído"){const f=new Date(a.fim);a.atrasada=f<hoje;}
+      else a.atrasada=false;
     });
   });
 }
 
-/* ===== EXPORTAÇÃO / BACKUP ===== */
 function exportToExcel(){
   let linhas=[];
   Object.keys(activityData).forEach(day=>{
     activityData[day].forEach(a=>{
-      linhas.push({
-        Dia:day,Atividade:a.text,Responsavel:a.responsavel,
-        Prioridade:a.prioridade,Status:a.status,
-        Inicio:a.inicio,Fim:a.fim,Depende:a.depende,Obs:a.obs
-      });
+      linhas.push({Dia:day,Atividade:a.text,Responsavel:a.responsavel,Prioridade:a.prioridade,Status:a.status,Inicio:a.inicio,Fim:a.fim,Depende:a.depende,Obs:a.obs,Calendário:a.noCalendario?"Sim":"Não"});
     });
   });
-
   const ws=XLSX.utils.json_to_sheet(linhas);
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,"Atividades");
@@ -871,60 +907,42 @@ function exportToExcel(){
 function exportBackup(){
   const blob=new Blob([JSON.stringify(activityData,null,2)],{type:"application/json"});
   const url=URL.createObjectURL(blob);
-  const a=document.createElement("a");
-  a.href=url;
-  a.download="backup_gerenciador.json";
-  a.click();
+  const a=document.createElement("a"); a.href=url; a.download="backup_gerenciador.json"; a.click();
 }
 
-function importBackup(){
-  document.getElementById("importFile").click();
-}
+function importBackup(){ document.getElementById("importFile").click(); }
 
 function handleImportFile(evt){
-  const file=evt.target.files[0];
-  if(!file) return;
-
+  const file=evt.target.files[0]; if(!file) return;
   const reader=new FileReader();
   reader.onload=e=>{
-    try{
-      activityData=JSON.parse(e.target.result);
-      saveData();
-      createTimeline();
-      showAllActivities();
-      alert("Backup importado com sucesso!");
-    }catch{
-      alert("Erro ao importar JSON.");
-    }
+    try{activityData=JSON.parse(e.target.result);saveData();createTimeline();showAllActivities();alert("Backup importado com sucesso!");}
+    catch{alert("Erro ao importar JSON.");}
   };
   reader.readAsText(file);
 }
 
-/* ===== PAINÉIS ===== */
 function openPanel(panel){
   document.querySelectorAll(".panel").forEach(p=>p.style.display="none");
   document.getElementById(panel).style.display="block";
-
-  if(panel==="fluxoPanel") renderFluxo();
-  if(panel==="ganttPanel") renderGantt();
+  document.querySelectorAll(".nav-btn").forEach(b=>b.classList.remove("active"));
+  const nb=document.getElementById("nav-"+panel); if(nb) nb.classList.add("active");
+  if(panel==="fluxoPanel")      renderFluxo();
+  if(panel==="ganttPanel")      renderGantt();
+  if(panel==="calendarioPanel") renderCalendario();
 }
 
-/* ===== START ===== */
+document.addEventListener("dragover",e=>{
+  const tip=document.getElementById("dragTooltip");
+  if(tip.style.display==="block"){tip.style.left=(e.clientX+16)+"px";tip.style.top=(e.clientY+10)+"px";}
+});
+
 updateMesTexto();
 createTimeline();
-
 const hoje=new Date().getDate();
 showDay(hoje);
-setTimeout(autoResizeAllTextareas, 0);
-
-renderFluxo();
-updateProgress();
-verificarAtrasos();
-renderGantt();
-
+setTimeout(autoResizeAllTextareas,0);
+renderFluxo(); updateProgress(); verificarAtrasos(); renderGantt();
 </script>
-
-
-<div id="footerApp">Anderson Marinho | Igarapé Digital</div>
 </body>
 </html>
