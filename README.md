@@ -131,3 +131,22 @@ Os dados são armazenados no navegador no seguinte formato:
 As atividades criadas diretamente no calendário pelo botão `+` agora são salvas em `calendarioDireto` no `localStorage` com repetição mensal automática. Ao navegar para os meses seguintes, a atividade aparece no mesmo dia do mês. Quando o mês não possui o dia original, por exemplo uma atividade criada no dia 31 em fevereiro, ela é exibida no último dia disponível do mês.
 
 As atividades vindas da Linha do Tempo continuam aparecendo no calendário com a etiqueta `LT`. As atividades criadas direto no calendário aparecem com a etiqueta `M`.
+
+## Ajuste 29/06/2026 - Calendário direto mensal
+
+Correções aplicadas:
+
+- O botão `+` do calendário não usa mais `prompt()` do navegador. Agora abre um formulário pequeno dentro do próprio dia, com campo de atividade, prioridade e botões Salvar/Cancelar.
+- As atividades criadas diretamente no calendário continuam sendo repetidas nos meses seguintes.
+- Registros vazios antigos do `localStorage` não são mais exibidos como `(sem título)`.
+- Atividades da Linha do Tempo sem texto, mesmo marcadas para calendário, não aparecem mais no calendário.
+- `index.html` recebeu cache busting em `app.js` e `styles.css` para evitar que o GitHub Pages carregue versão antiga em cache.
+
+Como usar:
+
+1. Abra o Calendário.
+2. Clique no `+` do dia desejado.
+3. Digite a atividade.
+4. Escolha a prioridade.
+5. Clique em Salvar.
+6. Ao navegar para o mês seguinte, a atividade aparecerá automaticamente no mesmo dia.

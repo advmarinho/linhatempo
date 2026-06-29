@@ -415,3 +415,47 @@
     font-weight: 700;
   }
   .cal-event-direto { border-left-color: rgba(255,255,255,.45); }
+
+  /* ── CORREÇÃO GITHUB PAGES: FORMULÁRIO DO + NO CALENDÁRIO ── */
+  .cal-quick-form {
+    background: #ffffff;
+    border: 1px solid var(--primary-lt);
+    border-left: 4px solid var(--primary);
+    border-radius: 6px;
+    padding: 6px;
+    margin: 4px 0 6px;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .cal-quick-form input,
+  .cal-quick-form select {
+    width: 100%;
+    min-height: 26px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px 6px;
+    font-size: 11.5px;
+  }
+  .cal-quick-form input:focus,
+  .cal-quick-form select:focus {
+    outline: 2px solid rgba(0,131,202,.16);
+    border-color: var(--primary);
+  }
+  .cal-quick-actions {
+    display: flex;
+    gap: 5px;
+  }
+  .cal-quick-actions button {
+    flex: 1;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 5px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .cal-mini-save { background: var(--primary); color: #fff; }
+  .cal-mini-cancel { background: #eef2f6; color: var(--text-muted); border: 1px solid var(--border) !important; }

@@ -1,10 +1,11 @@
 let activityData = readJsonStorage("activityData", {});
-let calendarioDireto = readJsonStorage("calendarioDireto", []);
-calendarioDireto = calendarioDireto.map(e => normalizarEventoCalendario(e));
+let calendarioDireto = normalizarListaCalendario(readJsonStorage("calendarioDireto", []));
 migrarCalendarioDiretoLegado();
+limparCalendarioDiretoVazio();
 let dragSource = null;
 let calAno = new Date().getFullYear();
 let calMes = new Date().getMonth();
+let calQuickForm = null;
 
 function autoResizeTextarea(el){ if(!el) return; el.style.height="auto"; el.style.height=el.scrollHeight+"px"; }
 function autoResizeAllTextareas(){ document.querySelectorAll("textarea").forEach(t=>autoResizeTextarea(t)); }
@@ -41,8 +42,39 @@ function newId(){
   return "id-"+Date.now()+"-"+Math.random().toString(16).slice(2);
 }
 
+function normalizarListaCalendario(valor){
+  if(!Array.isArray(valor)) return [];
+  return dedupeEventosCalendario(valor.map(e => normalizarEventoCalendario(e)).filter(eventoTemTexto));
+}
+
+function eventoTemTexto(e){
+  return sanitizePromptText(e && (e.text || e.titulo || e.atividade)).length > 0;
+}
+
+function dedupeEventosCalendario(lista){
+  const vistos=new Set();
+  return lista.filter(e=>{
+    const chave=e.id || `${e.text}|${e.day}|${e.startYear}|${e.startMonth}`;
+    if(vistos.has(chave)) return false;
+    vistos.add(chave);
+    return true;
+  });
+}
+
+function limparCalendarioDiretoVazio(){
+  const antes=calendarioDireto.length;
+  calendarioDireto=dedupeEventosCalendario(calendarioDireto.filter(eventoTemTexto));
+  if(calendarioDireto.length!==antes) saveCalendarioDireto();
+}
+
 function saveCalendarioDireto(){
-  localStorage.setItem("calendarioDireto", JSON.stringify(calendarioDireto));
+  calendarioDireto=dedupeEventosCalendario(calendarioDireto.map(e=>normalizarEventoCalendario(e)).filter(eventoTemTexto));
+  try{
+    localStorage.setItem("calendarioDireto", JSON.stringify(calendarioDireto));
+  }catch(e){
+    console.error("Não foi possível salvar calendarioDireto no localStorage", e);
+    alert("Não consegui salvar no navegador. Verifique se o armazenamento/localStorage está liberado para este site.");
+  }
 }
 
 function normalizarEventoCalendario(e={}, day, startYear, startMonth){
@@ -57,7 +89,7 @@ function normalizarEventoCalendario(e={}, day, startYear, startMonth){
   if(!ano || isNaN(ano)) ano=now.getFullYear();
   return {
     id: e.id || newId(),
-    text: e.text || e.titulo || e.atividade || "",
+    text: sanitizePromptText(e.text || e.titulo || e.atividade || ""),
     responsavel: e.responsavel || "",
     prioridade: e.prioridade || "Média",
     status: e.status || "Pendente",
@@ -97,7 +129,7 @@ function migrarCalendarioDiretoLegado(){
     });
   });
   if(importados.length){
-    calendarioDireto=importados;
+    calendarioDireto=dedupeEventosCalendario(importados.map(e=>normalizarEventoCalendario(e)).filter(eventoTemTexto));
     saveCalendarioDireto();
   }
 }
@@ -113,13 +145,13 @@ function eventoDiretoApareceNoDia(e,y,m,d){
 }
 
 function eventosDiretosDoDia(y,m,d){
-  return calendarioDireto.filter(e=>eventoDiretoApareceNoDia(e,y,m,d));
+  return calendarioDireto.filter(e=>eventoTemTexto(e) && eventoDiretoApareceNoDia(e,y,m,d));
 }
 
 function sanitizePromptText(s){ return String(s||"").trim(); }
 
 function textoEventoCalendario(a){
-  return sanitizePromptText(a.text || a.titulo || a.atividade || "(sem título)");
+  return sanitizePromptText(a.text || a.titulo || a.atividade || "");
 }
 
 function classeCalendarioPorStatusPrioridade(ev,a){
@@ -130,10 +162,18 @@ function classeCalendarioPorStatusPrioridade(ev,a){
 }
 
 function addCalendarActivity(day){
-  const texto=sanitizePromptText(prompt("Digite a atividade para este dia do calendário:"));
-  if(!texto) return;
-  const prioridadeRaw=sanitizePromptText(prompt("Prioridade: Baixa, Média ou Alta", "Média"));
-  const prioridade=["Baixa","Média","Alta"].includes(prioridadeRaw) ? prioridadeRaw : "Média";
+  calQuickForm={day:Number(day)};
+  renderCalendario();
+  setTimeout(()=>{
+    const input=document.getElementById("calQuickText");
+    if(input) input.focus();
+  },0);
+}
+
+function salvarAtividadeCalendarioDireta(day,texto,prioridade){
+  texto=sanitizePromptText(texto);
+  if(!texto){ alert("Digite o nome da atividade antes de salvar."); return false; }
+  prioridade=["Baixa","Média","Alta"].includes(prioridade) ? prioridade : "Média";
   calendarioDireto.push(normalizarEventoCalendario({
     text:texto,
     prioridade,
@@ -145,6 +185,19 @@ function addCalendarActivity(day){
     obs:`Criada diretamente no calendário em ${String(day).padStart(2,"0")}/${String(calMes+1).padStart(2,"0")}/${calAno}. Repetição mensal automática.`
   }, day, calAno, calMes));
   saveCalendarioDireto();
+  calQuickForm=null;
+  renderCalendario();
+  return true;
+}
+
+function salvarQuickFormCalendario(day){
+  const input=document.getElementById("calQuickText");
+  const select=document.getElementById("calQuickPrioridade");
+  return salvarAtividadeCalendarioDireta(day, input ? input.value : "", select ? select.value : "Média");
+}
+
+function cancelarQuickFormCalendario(){
+  calQuickForm=null;
   renderCalendario();
 }
 
@@ -465,6 +518,47 @@ function calNavegar(delta){
   renderCalendario();
 }
 
+
+function buildQuickFormCalendario(day){
+  const wrap=document.createElement("div");
+  wrap.className="cal-quick-form";
+  wrap.onclick=e=>e.stopPropagation();
+
+  const input=document.createElement("input");
+  input.id="calQuickText";
+  input.type="text";
+  input.placeholder="Digite a atividade";
+  input.autocomplete="off";
+  input.onkeydown=e=>{
+    if(e.key==="Enter"){ e.preventDefault(); salvarQuickFormCalendario(day); }
+    if(e.key==="Escape"){ e.preventDefault(); cancelarQuickFormCalendario(); }
+  };
+
+  const select=document.createElement("select");
+  select.id="calQuickPrioridade";
+  ["Baixa","Média","Alta"].forEach(pr=>{
+    const opt=document.createElement("option");
+    opt.value=pr; opt.textContent=pr;
+    if(pr==="Média") opt.selected=true;
+    select.appendChild(opt);
+  });
+
+  const actions=document.createElement("div");
+  actions.className="cal-quick-actions";
+  const salvar=document.createElement("button");
+  salvar.type="button"; salvar.className="cal-mini-save"; salvar.textContent="Salvar";
+  salvar.onclick=()=>salvarQuickFormCalendario(day);
+  const cancelar=document.createElement("button");
+  cancelar.type="button"; cancelar.className="cal-mini-cancel"; cancelar.textContent="Cancelar";
+  cancelar.onclick=cancelarQuickFormCalendario;
+  actions.appendChild(salvar); actions.appendChild(cancelar);
+
+  wrap.appendChild(input);
+  wrap.appendChild(select);
+  wrap.appendChild(actions);
+  return wrap;
+}
+
 function renderCalendario(){
   const meses=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
   document.getElementById("calMesTexto").innerText=`${meses[calMes]} de ${calAno}`;
@@ -492,11 +586,15 @@ function renderCalendario(){
     add.onclick=e=>{e.stopPropagation();addCalendarActivity(d);};
     head.appendChild(add); cell.appendChild(head);
 
-    (activityData[d]||[]).filter(a=>a.noCalendario).forEach(a=>{
+    if(calQuickForm && calQuickForm.day===d){
+      cell.appendChild(buildQuickFormCalendario(d));
+    }
+
+    (activityData[d]||[]).filter(a=>a.noCalendario && textoEventoCalendario(a)).forEach(a=>{
       const ev=document.createElement("div"); ev.className="cal-event cal-event-lt";
       classeCalendarioPorStatusPrioridade(ev,a);
       ev.innerHTML=`<span class="cal-event-text">${escHtml(textoEventoCalendario(a))}</span><span class="cal-tag-lt">LT</span>`;
-      ev.title=`${a.text} | ${a.responsavel||"—"} | ${a.status} | Mapeada da Linha do Tempo`;
+      ev.title=`${textoEventoCalendario(a)} | ${a.responsavel||"—"} | ${a.status} | Mapeada da Linha do Tempo`;
       ev.onclick=e=>{e.stopPropagation();openPanel("timelinePanel");showDay(d);};
       cell.appendChild(ev);
     });
@@ -505,7 +603,7 @@ function renderCalendario(){
       const ev=document.createElement("div"); ev.className="cal-event cal-event-direto";
       classeCalendarioPorStatusPrioridade(ev,a);
       ev.innerHTML=`<span class="cal-event-text">${escHtml(textoEventoCalendario(a))}</span><span class="cal-tag-cal">M</span>`;
-      ev.title=`${a.text} | ${a.status} | Atividade direta do calendário com repetição mensal`;
+      ev.title=`${textoEventoCalendario(a)} | ${a.status} | Atividade direta do calendário com repetição mensal`;
       ev.onclick=e=>{e.stopPropagation();editarCalendarioDireto(a.id);};
       cell.appendChild(ev);
     });
@@ -573,7 +671,7 @@ function handleImportFile(evt){
       const parsed=JSON.parse(e.target.result);
       if(parsed && parsed.activityData){
         activityData=parsed.activityData || {};
-        calendarioDireto=(parsed.calendarioDireto || []).map(e=>normalizarEventoCalendario(e));
+        calendarioDireto=normalizarListaCalendario(parsed.calendarioDireto || []);
       }else{
         activityData=parsed || {};
         calendarioDireto=[];
@@ -607,3 +705,11 @@ const hoje=new Date().getDate();
 showDay(hoje);
 setTimeout(autoResizeAllTextareas,0);
 renderFluxo(); updateProgress(); verificarAtrasos(); renderGantt();
+
+Object.assign(window,{
+  autoResizeTextarea,autoResizeAllTextareas,saveData,showDay,showAllActivities,
+  toggleCalFlag,updateField,addActivity,deleteActivity,setAllActivitiesToPendente,
+  moveAllWeekendActivitiesToWeekday,moveActivity,renderFluxo,filterFluxo,renderGantt,
+  calNavegar,addCalendarActivity,salvarQuickFormCalendario,cancelarQuickFormCalendario,
+  editarCalendarioDireto,exportToExcel,exportBackup,importBackup,handleImportFile,openPanel
+});
