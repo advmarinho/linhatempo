@@ -125,3 +125,9 @@ Os dados são armazenados no navegador no seguinte formato:
     }
   ]
 }
+
+## Atualização - Calendário mensal automático
+
+As atividades criadas diretamente no calendário pelo botão `+` agora são salvas em `calendarioDireto` no `localStorage` com repetição mensal automática. Ao navegar para os meses seguintes, a atividade aparece no mesmo dia do mês. Quando o mês não possui o dia original, por exemplo uma atividade criada no dia 31 em fevereiro, ela é exibida no último dia disponível do mês.
+
+As atividades vindas da Linha do Tempo continuam aparecendo no calendário com a etiqueta `LT`. As atividades criadas direto no calendário aparecem com a etiqueta `M`.

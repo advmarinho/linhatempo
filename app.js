@@ -1,28 +1,20 @@
-let activityData = JSON.parse(localStorage.getItem("activityData")) || {};
-let calData = JSON.parse(localStorage.getItem("calData")) || {};   // entradas digitadas direto no calendário, por data real AAAA-MM-DD
+let activityData = readJsonStorage("activityData", {});
+let calendarioDireto = readJsonStorage("calendarioDireto", []);
+calendarioDireto = calendarioDireto.map(e => normalizarEventoCalendario(e));
+migrarCalendarioDiretoLegado();
 let dragSource = null;
 let calAno = new Date().getFullYear();
 let calMes = new Date().getMonth();
-let calEditorCtx = null;   // {iso, index} da entrada nativa em edição
-
-function pad2(n){ return String(n).padStart(2,"0"); }
-function isoFromYMD(y,m,d){ return `${y}-${pad2(m+1)}-${pad2(d)}`; }   // m = 0-11
-function saveCalData(){ localStorage.setItem("calData", JSON.stringify(calData)); }
-
-// Data real (AAAA-MM-DD) de uma atividade da Linha do Tempo para posicioná-la no calendário.
-// Usa a data de início quando válida; senão assume o dia (chave) no mês/ano REAL atual.
-function activityIsoDate(dayKey, a){
-  if(a && a.inicio && /^\d{4}-\d{2}-\d{2}$/.test(a.inicio)) return a.inicio;
-  const now = new Date();
-  return isoFromYMD(now.getFullYear(), now.getMonth(), Number(dayKey));
-}
 
 function autoResizeTextarea(el){ if(!el) return; el.style.height="auto"; el.style.height=el.scrollHeight+"px"; }
 function autoResizeAllTextareas(){ document.querySelectorAll("textarea").forEach(t=>autoResizeTextarea(t)); }
 
 function saveData(){
   localStorage.setItem("activityData", JSON.stringify(activityData));
+  saveCalendarioDireto();
   updateProgress(); updateDaysColors(); verificarAtrasos(); renderFluxo(); renderGantt();
+  const calPanel=document.getElementById("calendarioPanel");
+  if(calPanel && calPanel.style.display!=="none") renderCalendario();
 }
 
 function updateMesTexto(){
@@ -33,6 +25,150 @@ function updateMesTexto(){
 }
 
 function getDaysInMonth(y,m){ return new Date(y,m+1,0).getDate(); }
+
+function readJsonStorage(key, fallback){
+  try{
+    const raw=localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  }catch(e){
+    console.warn(`Não foi possível ler ${key} do localStorage`, e);
+    return fallback;
+  }
+}
+
+function newId(){
+  if(window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return "id-"+Date.now()+"-"+Math.random().toString(16).slice(2);
+}
+
+function saveCalendarioDireto(){
+  localStorage.setItem("calendarioDireto", JSON.stringify(calendarioDireto));
+}
+
+function normalizarEventoCalendario(e={}, day, startYear, startMonth){
+  const now=new Date();
+  let dia=Number(e.day ?? e.dia ?? day ?? now.getDate());
+  if(!dia || isNaN(dia)) dia=now.getDate();
+  dia=Math.max(1, Math.min(31, dia));
+  let mes=Number(e.startMonth ?? e.mesInicial ?? startMonth ?? now.getMonth());
+  if(mes>=1 && mes<=12 && e.startMonth===undefined && e.mesInicial!==undefined) mes=mes-1;
+  if(isNaN(mes) || mes<0 || mes>11) mes=now.getMonth();
+  let ano=Number(e.startYear ?? e.anoInicial ?? startYear ?? now.getFullYear());
+  if(!ano || isNaN(ano)) ano=now.getFullYear();
+  return {
+    id: e.id || newId(),
+    text: e.text || e.titulo || e.atividade || "",
+    responsavel: e.responsavel || "",
+    prioridade: e.prioridade || "Média",
+    status: e.status || "Pendente",
+    obs: e.obs || "",
+    day: dia,
+    startYear: ano,
+    startMonth: mes,
+    recorrenteMensal: e.recorrenteMensal !== false,
+    origem: "CAL"
+  };
+}
+
+function migrarCalendarioDiretoLegado(){
+  if(calendarioDireto.length){ saveCalendarioDireto(); return; }
+  const possibleKeys=["calendarData","calendarioData","calendarDirectData","calendarioDiretoData","calendarActivities","calendarioAtividades","atividadesCalendario","atividadesDiretasCalendario"];
+  const importados=[];
+  possibleKeys.forEach(key=>{
+    const legado=readJsonStorage(key,null);
+    if(!legado) return;
+    if(Array.isArray(legado)){
+      legado.forEach(e=>importados.push(normalizarEventoCalendario(e)));
+      return;
+    }
+    if(typeof legado!=="object") return;
+    Object.keys(legado).forEach(k=>{
+      const valor=legado[k];
+      if(/^\d{4}-\d{2}$/.test(k) && valor && typeof valor==="object"){
+        const [anoTxt,mesTxt]=k.split("-");
+        Object.keys(valor).forEach(dia=>{
+          const lista=Array.isArray(valor[dia])?valor[dia]:[valor[dia]];
+          lista.filter(Boolean).forEach(e=>importados.push(normalizarEventoCalendario(e, Number(dia), Number(anoTxt), Number(mesTxt)-1)));
+        });
+      }else if(/^\d{1,2}$/.test(k)){
+        const lista=Array.isArray(valor)?valor:[valor];
+        lista.filter(Boolean).forEach(e=>importados.push(normalizarEventoCalendario(e, Number(k))));
+      }
+    });
+  });
+  if(importados.length){
+    calendarioDireto=importados;
+    saveCalendarioDireto();
+  }
+}
+
+function mesSerial(y,m){ return y*12+m; }
+
+function eventoDiretoApareceNoDia(e,y,m,d){
+  const totalDias=getDaysInMonth(y,m);
+  const diaExibicao=Math.min(Number(e.day)||1,totalDias);
+  const inicio=mesSerial(Number(e.startYear),Number(e.startMonth));
+  const alvo=mesSerial(y,m);
+  return e.recorrenteMensal!==false && alvo>=inicio && diaExibicao===d;
+}
+
+function eventosDiretosDoDia(y,m,d){
+  return calendarioDireto.filter(e=>eventoDiretoApareceNoDia(e,y,m,d));
+}
+
+function sanitizePromptText(s){ return String(s||"").trim(); }
+
+function textoEventoCalendario(a){
+  return sanitizePromptText(a.text || a.titulo || a.atividade || "(sem título)");
+}
+
+function classeCalendarioPorStatusPrioridade(ev,a){
+  if(a.status==="Concluído")         ev.classList.add("ev-done");
+  else if(a.prioridade==="Alta")     ev.classList.add("ev-alta");
+  else if(a.prioridade==="Média")    ev.classList.add("ev-media");
+  else if(a.status==="Em andamento") ev.classList.add("ev-andamento");
+}
+
+function addCalendarActivity(day){
+  const texto=sanitizePromptText(prompt("Digite a atividade para este dia do calendário:"));
+  if(!texto) return;
+  const prioridadeRaw=sanitizePromptText(prompt("Prioridade: Baixa, Média ou Alta", "Média"));
+  const prioridade=["Baixa","Média","Alta"].includes(prioridadeRaw) ? prioridadeRaw : "Média";
+  calendarioDireto.push(normalizarEventoCalendario({
+    text:texto,
+    prioridade,
+    status:"Pendente",
+    day,
+    startYear:calAno,
+    startMonth:calMes,
+    recorrenteMensal:true,
+    obs:`Criada diretamente no calendário em ${String(day).padStart(2,"0")}/${String(calMes+1).padStart(2,"0")}/${calAno}. Repetição mensal automática.`
+  }, day, calAno, calMes));
+  saveCalendarioDireto();
+  renderCalendario();
+}
+
+function editarCalendarioDireto(id){
+  const atv=calendarioDireto.find(e=>e.id===id);
+  if(!atv) return;
+  const acao=sanitizePromptText(prompt(
+    `Atividade direta do calendário:\n${atv.text}\n\nDigite:\n1 - Editar texto\n2 - Alternar status Pendente/Concluído\n3 - Excluir esta recorrência mensal\n\nA recorrência mensal começa em ${String(atv.startMonth+1).padStart(2,"0")}/${atv.startYear}.`,
+    "1"
+  ));
+  if(!acao) return;
+  if(acao==="1"){
+    const novo=sanitizePromptText(prompt("Novo texto da atividade:", atv.text));
+    if(novo) atv.text=novo;
+  }else if(acao==="2"){
+    atv.status=atv.status==="Concluído"?"Pendente":"Concluído";
+  }else if(acao==="3"){
+    if(confirm("Excluir esta atividade direta do calendário e suas próximas repetições mensais?")){
+      calendarioDireto=calendarioDireto.filter(e=>e.id!==id);
+    }
+  }
+  saveCalendarioDireto();
+  renderCalendario();
+}
 
 function createTimeline(){
   const timeline=document.getElementById("timeline");
@@ -115,7 +251,7 @@ function buildRow(day,i,a){
   tr.addEventListener("drop",e=>{e.preventDefault();tr.classList.remove("drag-over-row");dropOnRow(Number(day),i);});
 
   const noCalChecked=a.noCalendario?"ativo":"inativo";
-  const noCalLabel=a.noCalendario?"Mapeada ✓":"Mapear";
+  const noCalIcon=a.noCalendario?"📅":"📋";
 
   tr.innerHTML=`
     <td><textarea oninput="autoResizeTextarea(this);updateField(${day},${i},'text',this.value)"
@@ -136,9 +272,9 @@ function buildRow(day,i,a){
     <td><input value="${escHtml(a.depende||"")}"  onchange="updateField(${day},${i},'depende',this.value)"></td>
     <td><textarea oninput="autoResizeTextarea(this);updateField(${day},${i},'obs',this.value)"
                   onchange="updateField(${day},${i},'obs',this.value)">${a.obs||""}</textarea></td>
-    <td><button type="button" class="flag-cal ${noCalChecked}"
-              title="${a.noCalendario?"Remover do Calendário":"Mapear esta atividade no Calendário"}"
-              onclick="toggleCalFlag(${day},${i},this)">${noCalLabel}</button></td>
+    <td><span class="flag-cal ${noCalChecked}"
+              title="${a.noCalendario?"Remover do calendário":"Adicionar ao calendário"}"
+              onclick="toggleCalFlag(${day},${i},this)">${noCalIcon}</span></td>
     <td>
       <button class="action-btn move-btn"   onclick="moveActivity(${day},${i})">↗ Mover</button>
       <button class="action-btn delete-btn" onclick="deleteActivity(${day},${i})">✕ Excluir</button>
@@ -153,9 +289,9 @@ function escHtml(s){
 function toggleCalFlag(day,index,el){
   const atv=activityData[day][index];
   atv.noCalendario=!atv.noCalendario;
-  el.textContent=atv.noCalendario?"Mapeada ✓":"Mapear";
+  el.textContent=atv.noCalendario?"📅":"📋";
   el.className="flag-cal "+(atv.noCalendario?"ativo":"inativo");
-  el.title=atv.noCalendario?"Remover do Calendário":"Mapear esta atividade no Calendário";
+  el.title=atv.noCalendario?"Remover do calendário":"Adicionar ao calendário";
   saveData();
 }
 
@@ -215,7 +351,7 @@ function addActivity(){
   else if(texto==="Todas as Atividades") day=parseInt(prompt("Dia (1-31):"));
   if(!day||isNaN(day)) day=new Date().getDate();
   if(!activityData[day]) activityData[day]=[];
-  activityData[day].unshift({id:crypto.randomUUID(),text:"",responsavel:"",prioridade:"Média",status:"Pendente",inicio:"",fim:"",depende:"",obs:"",noCalendario:false});
+  activityData[day].unshift({id:newId(),text:"",responsavel:"",prioridade:"Média",status:"Pendente",inicio:"",fim:"",depende:"",obs:"",noCalendario:false});
   saveData(); showDay(day);
 }
 
@@ -329,8 +465,6 @@ function calNavegar(delta){
   renderCalendario();
 }
 
-function prioClass(p){ return p==="Alta"?"ev-alta":p==="Média"?"ev-media":"ev-baixa"; }
-
 function renderCalendario(){
   const meses=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
   document.getElementById("calMesTexto").innerText=`${meses[calMes]} de ${calAno}`;
@@ -341,55 +475,38 @@ function renderCalendario(){
   const primeiroDow=new Date(calAno,calMes,1).getDay();
   const totalDias=getDaysInMonth(calAno,calMes);
   const hoje=new Date();
-
-  // Índice das atividades MAPEADAS da Linha do Tempo, agrupadas pela data real
-  const mapeadasPorData={};
-  Object.keys(activityData).forEach(day=>{
-    activityData[day].forEach(a=>{
-      if(!a.noCalendario) return;
-      const iso=activityIsoDate(day,a);
-      (mapeadasPorData[iso]=mapeadasPorData[iso]||[]).push({day,a});
-    });
-  });
-
-  for(let i=0;i<primeiroDow;i++){const e=document.createElement("div");e.className="cal-cell cal-empty";grid.appendChild(e);}
+  for(let i=0;i<primeiroDow;i++){
+    const e=document.createElement("div"); e.className="cal-cell cal-empty"; grid.appendChild(e);
+  }
   for(let d=1;d<=totalDias;d++){
-    const iso=isoFromYMD(calAno,calMes,d);
     const cell=document.createElement("div"); cell.className="cal-cell";
     const dow=new Date(calAno,calMes,d).getDay();
     if(dow===0||dow===6) cell.classList.add("cal-weekend");
     if(d===hoje.getDate()&&calMes===hoje.getMonth()&&calAno===hoje.getFullYear()) cell.classList.add("cal-today");
 
-    const top=document.createElement("div"); top.className="cal-cell-top";
-    const num=document.createElement("div"); num.className="cal-day-num"; num.innerText=d; top.appendChild(num);
-    const addBtn=document.createElement("button"); addBtn.className="cal-add"; addBtn.type="button";
-    addBtn.title="Digitar atividade neste dia"; addBtn.innerText="+";
-    addBtn.onclick=e=>{e.stopPropagation();addCalEntry(iso);};
-    top.appendChild(addBtn);
-    cell.appendChild(top);
+    const head=document.createElement("div"); head.className="cal-cell-head";
+    const num=document.createElement("div"); num.className="cal-day-num"; num.innerText=d; head.appendChild(num);
+    const add=document.createElement("button");
+    add.type="button"; add.className="cal-add-btn"; add.innerText="+";
+    add.title="Adicionar atividade direta no calendário. Ela será repetida nos próximos meses.";
+    add.onclick=e=>{e.stopPropagation();addCalendarActivity(d);};
+    head.appendChild(add); cell.appendChild(head);
 
-    // 1) Atividades DIGITADAS direto no calendário (nativas)
-    (calData[iso]||[]).forEach((a,idx)=>{
-      const ev=document.createElement("div"); ev.className="cal-event ev-nativa "+prioClass(a.prioridade);
-      if(a.status==="Concluído") ev.classList.add("ev-done");
-      else if(a.status==="Em andamento") ev.classList.add("ev-andamento");
-      const hora=a.hora?`${a.hora} · `:"";
-      ev.innerText=hora+(a.text||"(sem título)");
-      ev.title=`${a.text||""} | ${a.status||"Pendente"} | prioridade ${a.prioridade||"Média"}`;
-      ev.onclick=e=>{e.stopPropagation();openCalEditor(iso,idx);};
+    (activityData[d]||[]).filter(a=>a.noCalendario).forEach(a=>{
+      const ev=document.createElement("div"); ev.className="cal-event cal-event-lt";
+      classeCalendarioPorStatusPrioridade(ev,a);
+      ev.innerHTML=`<span class="cal-event-text">${escHtml(textoEventoCalendario(a))}</span><span class="cal-tag-lt">LT</span>`;
+      ev.title=`${a.text} | ${a.responsavel||"—"} | ${a.status} | Mapeada da Linha do Tempo`;
+      ev.onclick=e=>{e.stopPropagation();openPanel("timelinePanel");showDay(d);};
       cell.appendChild(ev);
     });
 
-    // 2) Atividades MAPEADAS a partir da Linha do Tempo (somente com o botão ligado)
-    (mapeadasPorData[iso]||[]).forEach(({day,a})=>{
-      const ev=document.createElement("div"); ev.className="cal-event ev-mapeada";
-      if(a.status==="Concluído")         ev.classList.add("ev-done");
-      else if(a.prioridade==="Alta")     ev.classList.add("ev-alta");
-      else if(a.prioridade==="Média")    ev.classList.add("ev-media");
-      else if(a.status==="Em andamento") ev.classList.add("ev-andamento");
-      ev.innerHTML=`<span class="ev-tag">LT</span>${escHtml(a.text||"(sem título)")}`;
-      ev.title=`Mapeada da Linha do Tempo (dia ${day}) | ${a.responsavel||"—"} | ${a.status}`;
-      ev.onclick=e=>{e.stopPropagation();openPanel("timelinePanel");showDay(Number(day));};
+    eventosDiretosDoDia(calAno,calMes,d).forEach(a=>{
+      const ev=document.createElement("div"); ev.className="cal-event cal-event-direto";
+      classeCalendarioPorStatusPrioridade(ev,a);
+      ev.innerHTML=`<span class="cal-event-text">${escHtml(textoEventoCalendario(a))}</span><span class="cal-tag-cal">M</span>`;
+      ev.title=`${a.text} | ${a.status} | Atividade direta do calendário com repetição mensal`;
+      ev.onclick=e=>{e.stopPropagation();editarCalendarioDireto(a.id);};
       cell.appendChild(ev);
     });
 
@@ -399,56 +516,6 @@ function renderCalendario(){
     grid.appendChild(cell);
   }
 }
-
-/* ───── Entradas digitadas direto no calendário ───── */
-function addCalEntry(iso){
-  if(!calData[iso]) calData[iso]=[];
-  calData[iso].push({id:crypto.randomUUID(),text:"",hora:"",prioridade:"Média",status:"Pendente"});
-  saveCalData();
-  openCalEditor(iso, calData[iso].length-1);
-  renderCalendario();
-}
-
-function openCalEditor(iso, index){
-  calEditorCtx={iso,index};
-  const a=(calData[iso]||[])[index]||{text:"",hora:"",prioridade:"Média",status:"Pendente"};
-  const [y,m,d]=iso.split("-");
-  document.getElementById("calEditorData").innerText=`${d}/${m}/${y}`;
-  document.getElementById("calEdText").value=a.text||"";
-  document.getElementById("calEdHora").value=a.hora||"";
-  document.getElementById("calEdPrioridade").value=a.prioridade||"Média";
-  document.getElementById("calEdStatus").value=a.status||"Pendente";
-  document.getElementById("calEditorOverlay").style.display="flex";
-  setTimeout(()=>document.getElementById("calEdText").focus(),0);
-}
-
-function closeCalEditor(){
-  document.getElementById("calEditorOverlay").style.display="none";
-  calEditorCtx=null;
-}
-
-function saveCalEditor(){
-  if(!calEditorCtx) return;
-  const {iso,index}=calEditorCtx;
-  if(!calData[iso]) calData[iso]=[];
-  const entry=calData[iso][index]||{id:crypto.randomUUID()};
-  entry.text=document.getElementById("calEdText").value.trim();
-  entry.hora=document.getElementById("calEdHora").value;
-  entry.prioridade=document.getElementById("calEdPrioridade").value;
-  entry.status=document.getElementById("calEdStatus").value;
-  calData[iso][index]=entry;
-  saveCalData(); closeCalEditor(); renderCalendario();
-}
-
-function deleteCalEditor(){
-  if(!calEditorCtx) return;
-  const {iso,index}=calEditorCtx;
-  if(!confirm("Excluir esta atividade do calendário?")) return;
-  if(calData[iso]) calData[iso].splice(index,1);
-  if(calData[iso] && calData[iso].length===0) delete calData[iso];
-  saveCalData(); closeCalEditor(); renderCalendario();
-}
-
 function updateProgress(){
   let total=0,done=0;
   Object.keys(activityData).forEach(day=>{activityData[day].forEach(a=>{total++;if(a.status==="Concluído")done++;});});
@@ -472,27 +539,26 @@ function exportToExcel(){
   let linhas=[];
   Object.keys(activityData).forEach(day=>{
     activityData[day].forEach(a=>{
-      linhas.push({Dia:day,Atividade:a.text,Responsavel:a.responsavel,Prioridade:a.prioridade,Status:a.status,Inicio:a.inicio,Fim:a.fim,Depende:a.depende,Obs:a.obs,Calendário:a.noCalendario?"Sim":"Não"});
+      linhas.push({Origem:"Linha do Tempo",Dia:day,Atividade:a.text,Responsavel:a.responsavel,Prioridade:a.prioridade,Status:a.status,Inicio:a.inicio,Fim:a.fim,Depende:a.depende,Obs:a.obs,Calendário:a.noCalendario?"Sim":"Não",Recorrência:""});
     });
   });
+  calendarioDireto.forEach(a=>{
+    linhas.push({Origem:"Calendário direto",Dia:a.day,Atividade:a.text,Responsavel:a.responsavel,Prioridade:a.prioridade,Status:a.status,Inicio:`${String(a.startMonth+1).padStart(2,"0")}/${a.startYear}`,Fim:"",Depende:"",Obs:a.obs,Calendário:"Sim",Recorrência:"Mensal automática"});
+  });
+  const ws=XLSX.utils.json_to_sheet(linhas);
   const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(linhas),"Atividades");
-
-  // Atividades digitadas direto no calendário
-  let calLinhas=[];
-  Object.keys(calData).sort().forEach(iso=>{
-    calData[iso].forEach(a=>{
-      calLinhas.push({Data:iso,Hora:a.hora||"",Atividade:a.text,Prioridade:a.prioridade,Status:a.status});
-    });
-  });
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(calLinhas),"Calendário");
-
+  XLSX.utils.book_append_sheet(wb,ws,"Atividades");
   XLSX.writeFile(wb,"Gerenciador_RH.xlsx");
 }
 
 function exportBackup(){
-  const payload={ versao:2, activityData, calData };
-  const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+  const backup={
+    version:2,
+    exportedAt:new Date().toISOString(),
+    activityData,
+    calendarioDireto
+  };
+  const blob=new Blob([JSON.stringify(backup,null,2)],{type:"application/json"});
   const url=URL.createObjectURL(blob);
   const a=document.createElement("a"); a.href=url; a.download="backup_gerenciador.json"; a.click();
 }
@@ -505,15 +571,17 @@ function handleImportFile(evt){
   reader.onload=e=>{
     try{
       const parsed=JSON.parse(e.target.result);
-      if(parsed && parsed.activityData!==undefined){      // backup novo (v2): {activityData, calData}
-        activityData=parsed.activityData||{};
-        calData=parsed.calData||{};
-      }else{                                              // backup antigo: só activityData
-        activityData=parsed||{};
+      if(parsed && parsed.activityData){
+        activityData=parsed.activityData || {};
+        calendarioDireto=(parsed.calendarioDireto || []).map(e=>normalizarEventoCalendario(e));
+      }else{
+        activityData=parsed || {};
+        calendarioDireto=[];
       }
-      saveData(); saveCalData(); createTimeline(); showAllActivities(); renderCalendario();
+      saveData(); createTimeline(); showAllActivities(); renderCalendario();
       alert("Backup importado com sucesso!");
-    }catch{alert("Erro ao importar JSON.");}
+    }
+    catch{alert("Erro ao importar JSON.");}
   };
   reader.readAsText(file);
 }

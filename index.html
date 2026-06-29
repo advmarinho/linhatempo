@@ -75,7 +75,7 @@
       <input type="file" id="importFile" accept=".json" style="display:none" onchange="handleImportFile(event)">
 
       <div class="hint-bar">
-        💡 Arraste uma linha até um círculo de dia ou outra linha para mover/reordenar. Use o botão <strong>Mapear</strong> para decidir se a atividade aparece no Calendário.
+        💡 Arraste uma linha até um círculo de dia ou outra linha para mover/reordenar. Clique em 📋 para marcar no Calendário.
       </div>
 
       <div class="table-wrap">
@@ -89,8 +89,8 @@
               <th style="width:8%">Início</th>
               <th style="width:8%">Fim</th>
               <th style="width:8%">Depende</th>
-              <th style="width:8%">Obs</th>
-              <th style="width:8%" title="Decidir se a atividade é mapeada no Calendário">Mapear</th>
+              <th style="width:14%">Obs</th>
+              <th style="width:4%" title="Calendário">📅</th>
               <th style="width:9%">Ações</th>
             </tr>
           </thead>
@@ -125,8 +125,8 @@
       <span id="calMesTexto"></span>
       <button class="btn btn-outline" onclick="calNavegar(1)">Próximo &#8250;</button>
     </div>
-    <div class="hint-bar">
-      Clique no <strong>+</strong> de um dia para <strong>digitar uma atividade direto no calendário</strong>. As atividades vindas da Linha do Tempo (marcadas com o botão Mapear) aparecem com a etiqueta <strong>LT</strong>.
+    <div class="hint-bar cal-hint">
+      Clique no + de um dia para digitar uma atividade direto no calendário. Essas atividades serão repetidas automaticamente nos meses seguintes. As atividades vindas da Linha do Tempo aparecem com a etiqueta LT.
     </div>
     <div class="cal-legenda">
       <strong style="color:var(--text-muted);font-size:11px;letter-spacing:.5px;">LEGENDA</strong>
@@ -135,44 +135,10 @@
       <span class="leg-item"><span class="leg-dot" style="background:var(--danger)"></span> Alta</span>
       <span class="leg-item"><span class="leg-dot" style="background:var(--info)"></span> Em andamento</span>
       <span class="leg-item"><span class="leg-dot" style="background:var(--success)"></span> Concluído</span>
-      <span class="leg-item"><span class="ev-tag" style="position:static">LT</span> Mapeada da Linha do Tempo</span>
+      <span style="margin-left:8px;color:var(--text-light);"><strong>LT</strong> = mapeada da Linha do Tempo</span>
+      <span style="margin-left:8px;color:var(--text-light);"><strong>M</strong> = calendário direto mensal</span>
     </div>
     <div class="cal-grid" id="calGrid"></div>
-  </div>
-
-  <!-- EDITOR DO CALENDÁRIO -->
-  <div id="calEditorOverlay" class="cal-editor-overlay">
-    <div class="cal-editor">
-      <div class="cal-editor-head">
-        <span>Atividade do dia <strong id="calEditorData">—</strong></span>
-        <button class="cal-editor-x" type="button" onclick="closeCalEditor()">&times;</button>
-      </div>
-      <label class="cal-editor-label">Atividade</label>
-      <textarea id="calEdText" class="cal-editor-text" rows="3" placeholder="Digite a atividade…"></textarea>
-      <div class="cal-editor-row">
-        <div>
-          <label class="cal-editor-label">Hora</label>
-          <input type="time" id="calEdHora">
-        </div>
-        <div>
-          <label class="cal-editor-label">Prioridade</label>
-          <select id="calEdPrioridade">
-            <option>Alta</option><option selected>Média</option><option>Baixa</option>
-          </select>
-        </div>
-        <div>
-          <label class="cal-editor-label">Status</label>
-          <select id="calEdStatus">
-            <option selected>Pendente</option><option>Em andamento</option><option>Concluído</option>
-          </select>
-        </div>
-      </div>
-      <div class="cal-editor-actions">
-        <button class="btn btn-primary" type="button" onclick="saveCalEditor()">Salvar</button>
-        <button class="btn btn-outline" type="button" onclick="deleteCalEditor()">Excluir</button>
-        <button class="btn btn-ghost" type="button" onclick="closeCalEditor()">Fechar</button>
-      </div>
-    </div>
   </div>
 
 </div><!-- /.app-content -->
