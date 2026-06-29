@@ -272,10 +272,11 @@
   .move-btn:hover   { background: #1f6391; }
   .delete-btn { background: var(--danger); color: #fff; }
   .delete-btn:hover { background: #a53125; }
-  .flag-cal { cursor: pointer; font-size: 17px; user-select: none; display: block; text-align: center; transition: transform .15s, opacity .15s; }
-  .flag-cal:hover { transform: scale(1.25); }
-  .flag-cal.ativo  { opacity: 1; }
-  .flag-cal.inativo { opacity: .28; }
+  .flag-cal { cursor: pointer; font-size: 11px; font-weight: 600; user-select: none; display: block; width: 100%; text-align: center; padding: 5px 6px; border-radius: 14px; border: 1.5px solid var(--border); transition: all .15s; line-height: 1.1; }
+  .flag-cal:hover { transform: translateY(-1px); }
+  .flag-cal.ativo   { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .flag-cal.inativo { background: #f0f4f8; color: var(--text-muted); }
+  .flag-cal.inativo:hover { background: var(--primary-pale); color: var(--primary); border-color: var(--primary-lt); }
 
   /* ── FLUXO ── */
   .fluxo-search {
@@ -339,6 +340,29 @@
   .cal-event.ev-alta      { background: var(--danger)  !important; }
   .cal-event.ev-media     { background: var(--warning) !important; }
   .cal-event.ev-andamento { background: var(--info)    !important; }
+
+  /* ── CALENDÁRIO: digitar no dia ── */
+  .cal-cell-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .cal-add { width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--border); background: #fff; color: var(--primary); font-size: 15px; line-height: 1; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; transition: all .14s; }
+  .cal-add:hover { background: var(--primary); color: #fff; border-color: var(--primary); transform: scale(1.1); }
+  .cal-event.ev-baixa { background: var(--primary) !important; }
+  .cal-event.ev-nativa { border-left: 3px solid rgba(255,255,255,.65); }
+  .cal-event.ev-mapeada { border-left: 3px dashed rgba(255,255,255,.7); }
+  .ev-tag { display: inline-block; background: rgba(0,0,0,.22); color: #fff; font-size: 8.5px; font-weight: 700; letter-spacing: .5px; padding: 1px 4px; border-radius: 3px; margin-right: 5px; vertical-align: middle; }
+
+  /* ── EDITOR DO CALENDÁRIO (modal) ── */
+  .cal-editor-overlay { display: none; position: fixed; inset: 0; background: rgba(0,40,70,.45); z-index: 10000; align-items: center; justify-content: center; padding: 20px; }
+  .cal-editor { background: #fff; width: 100%; max-width: 420px; border-radius: 12px; padding: 20px 22px; box-shadow: 0 18px 50px rgba(0,0,0,.28); }
+  .cal-editor-head { display: flex; align-items: center; justify-content: space-between; font-size: 15px; color: var(--primary-dk); font-weight: 600; margin-bottom: 14px; }
+  .cal-editor-x { background: none; border: none; font-size: 24px; line-height: 1; color: var(--text-light); cursor: pointer; padding: 0 2px; }
+  .cal-editor-x:hover { color: var(--danger); }
+  .cal-editor-label { display: block; font-size: 11px; font-weight: 600; color: var(--text-muted); letter-spacing: .4px; margin: 0 0 4px; text-transform: uppercase; }
+  .cal-editor-text { width: 100%; resize: vertical; padding: 9px 11px; border: 1px solid var(--border); border-radius: 7px; font: inherit; font-size: 13px; margin-bottom: 12px; }
+  .cal-editor-text:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0,131,202,.12); }
+  .cal-editor-row { display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 10px; margin-bottom: 18px; }
+  .cal-editor-row input, .cal-editor-row select { width: 100%; padding: 8px 9px; border: 1px solid var(--border); border-radius: 7px; font: inherit; font-size: 13px; }
+  .cal-editor-row input:focus, .cal-editor-row select:focus { outline: none; border-color: var(--primary); }
+  .cal-editor-actions { display: flex; gap: 8px; justify-content: flex-end; }
 
   /* ── FOOTER ── */
   .app-footer {
