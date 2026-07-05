@@ -855,25 +855,48 @@ function exportBackup(){
   const a=document.createElement("a"); a.href=url; a.download="backup_gerenciador.json"; a.click();
 }
 
-function importBackup(){ document.getElementById("importFile").click(); }
+function importBackup(){
+  const input=document.getElementById("importFile");
+  input.value="";
+  input.click();
+}
 
 function handleImportFile(evt){
-  const file=evt.target.files[0]; if(!file) return;
+  const file=evt.target.files[0];
+  evt.target.value="";
+  if(!file) return;
   const reader=new FileReader();
+  reader.onerror=()=>alert("Não consegui ler o arquivo selecionado. Tente novamente.");
   reader.onload=e=>{
+    let parsed;
     try{
-      const parsed=JSON.parse(e.target.result);
-      if(parsed && parsed.activityData){
-        activityData=parsed.activityData || {};
-        calendarioDireto=normalizarListaCalendario(parsed.calendarioDireto || []);
-      }else{
-        activityData=parsed || {};
-        calendarioDireto=[];
-      }
-      saveData(); createTimeline(); showAllActivities(); renderCalendario();
-      alert("Backup importado com sucesso!");
+      parsed=JSON.parse(e.target.result);
+    }catch(err){
+      alert("O arquivo não é um JSON válido.\nDetalhe técnico: "+err.message);
+      return;
     }
-    catch{alert("Erro ao importar JSON.");}
+    try{
+      let novoActivity={};
+      let novoCalendario=[];
+      if(parsed && typeof parsed==="object" && parsed.activityData){
+        novoActivity=parsed.activityData || {};
+        novoCalendario=normalizarListaCalendario(parsed.calendarioDireto || []);
+      }else{
+        novoActivity=parsed || {};
+        novoCalendario=[];
+      }
+      Object.keys(novoActivity).forEach(dia=>{
+        if(!Array.isArray(novoActivity[dia])) delete novoActivity[dia];
+      });
+      activityData=novoActivity;
+      calendarioDireto=novoCalendario;
+      saveData(); createTimeline(); showAllActivities(); renderCalendario();
+      const totalLT=Object.values(activityData).reduce((s,v)=>s+v.length,0);
+      alert(`Backup importado com sucesso!\n${totalLT} atividades da Linha do Tempo e ${calendarioDireto.length} atividades diretas do calendário.`);
+    }catch(err){
+      console.error("Erro ao aplicar backup importado", err);
+      alert("O JSON foi lido, mas houve um erro ao aplicar os dados.\nDetalhe técnico: "+err.message);
+    }
   };
   reader.readAsText(file);
 }
