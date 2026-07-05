@@ -1,7 +1,5 @@
-let activityData = readJsonStorage("activityData", {});
-let calendarioDireto = normalizarListaCalendario(readJsonStorage("calendarioDireto", []));
-migrarCalendarioDiretoLegado();
-limparCalendarioDiretoVazio();
+let activityData = {};
+let calendarioDireto = [];
 let dragSource = null;
 let dragCalSource = null;
 let calAno = new Date().getFullYear();
@@ -62,9 +60,155 @@ function newId(){
   return "id-"+Date.now()+"-"+Math.random().toString(16).slice(2);
 }
 
+function normalizarBooleano(valor, padrao=false){
+  if(typeof valor === "boolean") return valor;
+  if(typeof valor === "number") return valor !== 0;
+  const txt=String(valor ?? "").trim().toLowerCase();
+  if(["true","1","sim","yes","s","x"].includes(txt)) return true;
+  if(["false","0","não","nao","no","n",""].includes(txt)) return false;
+  return padrao;
+}
+
+function normalizarPrioridade(valor){
+  const txt=String(valor ?? "").trim().toLowerCase();
+  if(["alta","high","urgente","critical","crítica","critica"].includes(txt)) return "Alta";
+  if(["baixa","low"].includes(txt)) return "Baixa";
+  return "Média";
+}
+
+function normalizarStatus(valor, checked){
+  if(normalizarBooleano(checked,false)) return "Concluído";
+  const txt=String(valor ?? "").trim().toLowerCase();
+  if(["concluído","concluido","done","completed","finalizado","finalizada"].includes(txt)) return "Concluído";
+  if(["em andamento","andamento","doing","in progress","em progresso"].includes(txt)) return "Em andamento";
+  return "Pendente";
+}
+
+function normalizarDataISO(valor){
+  const txt=String(valor ?? "").trim();
+  if(!txt) return "";
+  if(/^\d{4}-\d{2}-\d{2}$/.test(txt)) return txt;
+  const br=txt.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+  if(br){
+    const [,d,m,y]=br;
+    return `${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+  }
+  const dt=new Date(txt);
+  if(!Number.isNaN(dt.getTime())){
+    const y=dt.getFullYear();
+    const m=String(dt.getMonth()+1).padStart(2,"0");
+    const d=String(dt.getDate()).padStart(2,"0");
+    return `${y}-${m}-${d}`;
+  }
+  return "";
+}
+
+function normalizarAtividadeLinha(a={}){
+  if(a===null || typeof a!=="object") a={text:String(a ?? "")};
+  const text=a.text ?? a.titulo ?? a.atividade ?? a.descricao ?? a.nome ?? "";
+  const obs=a.obs ?? a.observacao ?? a.observação ?? a.notes ?? a.nota ?? "";
+  const depende=a.depende ?? a.dependencia ?? a.dependência ?? a.dependsOn ?? "";
+  const responsavel=a.responsavel ?? a.responsável ?? a.owner ?? a.assignedTo ?? "";
+  const noCalendario=a.noCalendario ?? a.calendario ?? a.noCalendar ?? a.calendar ?? false;
+  const cor=String(a.cor ?? "").trim();
+  return {
+    id: a.id || a.uuid || newId(),
+    text: String(text ?? ""),
+    responsavel: String(responsavel ?? ""),
+    prioridade: normalizarPrioridade(a.prioridade ?? a.priority),
+    status: normalizarStatus(a.status, a.checked),
+    inicio: normalizarDataISO(a.inicio ?? a.dataInicio ?? a.startDate),
+    fim: normalizarDataISO(a.fim ?? a.dataFim ?? a.endDate),
+    depende: String(depende ?? ""),
+    obs: String(obs ?? ""),
+    noCalendario: normalizarBooleano(noCalendario,false),
+    atrasada: normalizarBooleano(a.atrasada,false),
+    cor: ["azul","escuro","petroleo","claro","bordo","terra"].includes(cor) ? cor : ""
+  };
+}
+
+function normalizarActivityData(valor){
+  const origem=(valor && typeof valor==="object" && !Array.isArray(valor) && valor.activityData)
+    ? valor.activityData
+    : valor;
+  const saida={};
+
+  if(Array.isArray(origem)){
+    origem.forEach(item=>{
+      if(item===null || item===undefined) return;
+      const dia=Number(item.day ?? item.dia ?? item.dataDia);
+      if(!Number.isInteger(dia) || dia<1 || dia>31) return;
+      if(!saida[dia]) saida[dia]=[];
+      saida[dia].push(normalizarAtividadeLinha(item));
+    });
+    return saida;
+  }
+
+  if(!origem || typeof origem!=="object") return saida;
+  Object.entries(origem).forEach(([chave,lista])=>{
+    const dia=Number(chave);
+    if(!Number.isInteger(dia) || dia<1 || dia>31) return;
+    const itens=Array.isArray(lista) ? lista : (lista ? [lista] : []);
+    saida[dia]=itens.map(normalizarAtividadeLinha);
+  });
+  return saida;
+}
+
+function extrairCalendarioImportado(parsed){
+  if(!parsed || typeof parsed!=="object") return [];
+  const candidatos=[
+    parsed.calendarioDireto,
+    parsed.calendarData,
+    parsed.calendarioData,
+    parsed.calendarDirectData,
+    parsed.calendarioDiretoData,
+    parsed.calendarActivities,
+    parsed.calendarioAtividades,
+    parsed.atividadesCalendario,
+    parsed.atividadesDiretasCalendario
+  ];
+  for(const candidato of candidatos){
+    if(candidato && (Array.isArray(candidato) || typeof candidato==="object")) return candidato;
+  }
+  return [];
+}
+
+function analisarBackupImportado(parsed){
+  if(!parsed || typeof parsed!=="object") throw new Error("A raiz do arquivo precisa ser um objeto ou uma lista JSON.");
+  const activityDataNormalizado=normalizarActivityData(parsed);
+  const calendarioNormalizado=normalizarListaCalendario(extrairCalendarioImportado(parsed));
+  const totalLT=Object.values(activityDataNormalizado).reduce((s,v)=>s+v.length,0);
+  if(totalLT===0 && calendarioNormalizado.length===0){
+    throw new Error("Nenhuma atividade reconhecida. O arquivo não contém activityData, dias de 1 a 31 ou calendário compatível.");
+  }
+  return {activityData:activityDataNormalizado, calendarioDireto:calendarioNormalizado};
+}
+
 function normalizarListaCalendario(valor){
-  if(!Array.isArray(valor)) return [];
-  return dedupeEventosCalendario(valor.map(e => normalizarEventoCalendario(e)).filter(eventoTemTexto));
+  const coletados=[];
+
+  const adicionar=(e,day,startYear,startMonth)=>{
+    if(e===null || e===undefined) return;
+    if(typeof e!=="object") e={text:String(e)};
+    coletados.push(normalizarEventoCalendario(e,day,startYear,startMonth));
+  };
+
+  if(Array.isArray(valor)){
+    valor.forEach(e=>adicionar(e));
+  }else if(valor && typeof valor==="object"){
+    Object.entries(valor).forEach(([chave,conteudo])=>{
+      if(/^\d{4}-\d{2}$/.test(chave) && conteudo && typeof conteudo==="object"){
+        const [anoTxt,mesTxt]=chave.split("-");
+        Object.entries(conteudo).forEach(([dia,lista])=>{
+          (Array.isArray(lista)?lista:[lista]).forEach(e=>adicionar(e,Number(dia),Number(anoTxt),Number(mesTxt)-1));
+        });
+      }else if(/^\d{1,2}$/.test(chave)){
+        (Array.isArray(conteudo)?conteudo:[conteudo]).forEach(e=>adicionar(e,Number(chave)));
+      }
+    });
+  }
+
+  return dedupeEventosCalendario(coletados.filter(eventoTemTexto));
 }
 
 function eventoTemTexto(e){
@@ -110,18 +254,24 @@ function normalizarEventoCalendario(e={}, day, startYear, startMonth){
   return {
     id: e.id || newId(),
     text: sanitizePromptText(e.text || e.titulo || e.atividade || ""),
-    responsavel: e.responsavel || "",
-    prioridade: e.prioridade || "Média",
-    status: e.status || "Pendente",
+    responsavel: String(e.responsavel ?? e.responsável ?? e.owner ?? ""),
+    prioridade: normalizarPrioridade(e.prioridade ?? e.priority),
+    status: normalizarStatus(e.status, e.checked),
     cor: corSonovaValida(e.cor) ? e.cor : "",
-    obs: e.obs || "",
+    obs: String(e.obs ?? e.observacao ?? e.observação ?? e.notes ?? ""),
     day: dia,
     startYear: ano,
     startMonth: mes,
-    recorrenteMensal: e.recorrenteMensal !== false,
+    recorrenteMensal: e.recorrenteMensal === undefined ? true : normalizarBooleano(e.recorrenteMensal,true),
     origem: "CAL"
   };
 }
+
+// Inicialização segura: primeiro as funções e a paleta são carregadas, depois os dados são normalizados.
+activityData = normalizarActivityData(readJsonStorage("activityData", {}));
+calendarioDireto = normalizarListaCalendario(readJsonStorage("calendarioDireto", []));
+migrarCalendarioDiretoLegado();
+limparCalendarioDiretoVazio();
 
 function migrarCalendarioDiretoLegado(){
   if(calendarioDireto.length){ saveCalendarioDireto(); return; }
@@ -377,7 +527,7 @@ function buildRow(day,i,a){
 
   tr.innerHTML=`
     <td><textarea oninput="autoResizeTextarea(this);updateField(${day},${i},'text',this.value)"
-                  onchange="updateField(${day},${i},'text',this.value)">${a.text||""}</textarea></td>
+                  onchange="updateField(${day},${i},'text',this.value)">${escHtml(a.text||"")}</textarea></td>
     <td><input value="${escHtml(a.responsavel||"")}" onchange="updateField(${day},${i},'responsavel',this.value)"></td>
     <td><select onchange="updateField(${day},${i},'prioridade',this.value)">
       <option ${a.prioridade==="Alta"?"selected":""}>Alta</option>
@@ -393,7 +543,7 @@ function buildRow(day,i,a){
     <td><input type="date" value="${a.fim||""}"   onchange="updateField(${day},${i},'fim',this.value)"></td>
     <td><input value="${escHtml(a.depende||"")}"  onchange="updateField(${day},${i},'depende',this.value)"></td>
     <td><textarea oninput="autoResizeTextarea(this);updateField(${day},${i},'obs',this.value)"
-                  onchange="updateField(${day},${i},'obs',this.value)">${a.obs||""}</textarea></td>
+                  onchange="updateField(${day},${i},'obs',this.value)">${escHtml(a.obs||"")}</textarea></td>
     <td><span class="flag-cal ${noCalChecked}"
               title="${a.noCalendario?"Remover do calendário":"Adicionar ao calendário"}"
               onclick="toggleCalFlag(${day},${i},this)">${noCalIcon}</span></td>
@@ -633,7 +783,7 @@ function renderFluxo(){
       else if(a.atrasada)                card.classList.add("card-atrasado");
       else if(a.status==="Em andamento") card.classList.add("card-andamento");
       else if(a.status==="Pendente")     card.classList.add("card-pendente");
-      card.innerHTML=`<b>${a.text||""}</b>Dia: ${day} · ${a.inicio||"—"} → ${a.fim||"—"}`;
+      card.innerHTML=`<b>${escHtml(a.text||"")}</b>Dia: ${escHtml(day)} · ${escHtml(a.inicio||"—")} → ${escHtml(a.fim||"—")}`;
       card.onclick=()=>{openPanel("timelinePanel");showDay(day);};
       if(a.status==="Pendente") todo.appendChild(card);
       else if(a.status==="Em andamento") doing.appendChild(card);
@@ -845,7 +995,7 @@ function exportToExcel(){
 
 function exportBackup(){
   const backup={
-    version:2,
+    version:3,
     exportedAt:new Date().toISOString(),
     activityData,
     calendarioDireto
@@ -870,26 +1020,16 @@ function handleImportFile(evt){
   reader.onload=e=>{
     let parsed;
     try{
-      parsed=JSON.parse(e.target.result);
+      const textoJson=String(e.target.result ?? "").replace(/^\uFEFF/,"").trim();
+      parsed=JSON.parse(textoJson);
     }catch(err){
       alert("O arquivo não é um JSON válido.\nDetalhe técnico: "+err.message);
       return;
     }
     try{
-      let novoActivity={};
-      let novoCalendario=[];
-      if(parsed && typeof parsed==="object" && parsed.activityData){
-        novoActivity=parsed.activityData || {};
-        novoCalendario=normalizarListaCalendario(parsed.calendarioDireto || []);
-      }else{
-        novoActivity=parsed || {};
-        novoCalendario=[];
-      }
-      Object.keys(novoActivity).forEach(dia=>{
-        if(!Array.isArray(novoActivity[dia])) delete novoActivity[dia];
-      });
-      activityData=novoActivity;
-      calendarioDireto=novoCalendario;
+      const importado=analisarBackupImportado(parsed);
+      activityData=importado.activityData;
+      calendarioDireto=importado.calendarioDireto;
       saveData(); createTimeline(); showAllActivities(); renderCalendario();
       const totalLT=Object.values(activityData).reduce((s,v)=>s+v.length,0);
       alert(`Backup importado com sucesso!\n${totalLT} atividades da Linha do Tempo e ${calendarioDireto.length} atividades diretas do calendário.`);
