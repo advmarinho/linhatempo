@@ -4,6 +4,12 @@
     --primary-md:   #005A8E;
     --primary-lt:   #6EB4DC;
     --primary-pale: #E8F3FB;
+    --snv-azul:     #0083CA;
+    --snv-escuro:   #003C64;
+    --snv-petroleo: #005A64;
+    --snv-claro:    #6EB4DC;
+    --snv-bordo:    #7D0041;
+    --snv-terra:    #8C321E;
     --success:      #27ae60;
     --warning:      #d48700;
     --danger:       #c0392b;
@@ -459,3 +465,70 @@
   }
   .cal-mini-save { background: var(--primary); color: #fff; }
   .cal-mini-cancel { background: #eef2f6; color: var(--text-muted); border: 1px solid var(--border) !important; }
+
+  /* ── CLASSIFICAÇÃO POR CORES SONOVA (CALENDÁRIO) ── */
+  .cal-event.ev-snv-azul     { background: var(--snv-azul)     !important; color: #fff; }
+  .cal-event.ev-snv-escuro   { background: var(--snv-escuro)   !important; color: #fff; }
+  .cal-event.ev-snv-petroleo { background: var(--snv-petroleo) !important; color: #fff; }
+  .cal-event.ev-snv-claro    { background: var(--snv-claro)    !important; color: var(--snv-escuro); }
+  .cal-event.ev-snv-claro .cal-tag-lt,
+  .cal-event.ev-snv-claro .cal-tag-cal { background: rgba(255,255,255,.9); color: var(--snv-escuro); }
+  .cal-event.ev-snv-bordo    { background: var(--snv-bordo)    !important; color: #fff; }
+  .cal-event.ev-snv-terra    { background: var(--snv-terra)    !important; color: #fff; }
+
+  .cal-cor-btn {
+    flex: 0 0 auto;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.35);
+    border: 1.5px solid rgba(255,255,255,.85);
+    cursor: pointer;
+    transition: transform .12s;
+  }
+  .cal-cor-btn:hover { transform: scale(1.25); }
+  .cal-event.ev-snv-claro .cal-cor-btn { border-color: var(--snv-escuro); }
+
+  .snv-color-pop {
+    position: fixed;
+    z-index: 10000;
+    display: flex;
+    gap: 6px;
+    padding: 8px 10px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--snv-azul);
+    border-radius: 6px;
+    box-shadow: var(--shadow-md);
+  }
+  .snv-swatch {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px #CCCCCC;
+    cursor: pointer;
+    padding: 0;
+    transition: transform .12s;
+  }
+  .snv-swatch:hover { transform: scale(1.15); }
+  .snv-swatch-ativa { box-shadow: 0 0 0 2px var(--snv-escuro); }
+  .snv-swatch-auto {
+    background: #fff;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 18px;
+  }
+  .snv-swatch-mini { width: 16px; height: 16px; }
+  .cal-quick-cores { display: flex; gap: 4px; align-items: center; }
+
+  /* ── DRAG & DROP INTERNO DO CALENDÁRIO ── */
+  .cal-event { cursor: grab; }
+  .cal-event:active { cursor: grabbing; }
+  .cal-event.cal-dragging { opacity: .45; }
+  .cal-event.cal-event-drag-over {
+    outline: 2px dashed var(--snv-escuro);
+    outline-offset: 1px;
+  }
+  .cal-event .cal-event-text { flex: 1 1 auto; text-align: left; }

@@ -3,9 +3,29 @@ let calendarioDireto = normalizarListaCalendario(readJsonStorage("calendarioDire
 migrarCalendarioDiretoLegado();
 limparCalendarioDiretoVazio();
 let dragSource = null;
+let dragCalSource = null;
 let calAno = new Date().getFullYear();
 let calMes = new Date().getMonth();
 let calQuickForm = null;
+
+const CORES_SONOVA = [
+  { id: "azul",     nome: "Azul Sonova",  hex: "#0083CA" },
+  { id: "escuro",   nome: "Azul Escuro",  hex: "#003C64" },
+  { id: "petroleo", nome: "Petroleo",     hex: "#005A64" },
+  { id: "claro",    nome: "Azul Claro",   hex: "#6EB4DC" },
+  { id: "bordo",    nome: "Bordo",        hex: "#7D0041" },
+  { id: "terra",    nome: "Terracota",    hex: "#8C321E" }
+];
+
+function corSonovaValida(cor){ return CORES_SONOVA.some(c => c.id === cor); }
+function nomeCorSonova(cor){
+  const c = CORES_SONOVA.find(x => x.id === cor);
+  return c ? c.nome : "Automatica";
+}
+function hexCorSonova(cor){
+  const c = CORES_SONOVA.find(x => x.id === cor);
+  return c ? c.hex : "";
+}
 
 function autoResizeTextarea(el){ if(!el) return; el.style.height="auto"; el.style.height=el.scrollHeight+"px"; }
 function autoResizeAllTextareas(){ document.querySelectorAll("textarea").forEach(t=>autoResizeTextarea(t)); }
@@ -93,6 +113,7 @@ function normalizarEventoCalendario(e={}, day, startYear, startMonth){
     responsavel: e.responsavel || "",
     prioridade: e.prioridade || "Média",
     status: e.status || "Pendente",
+    cor: corSonovaValida(e.cor) ? e.cor : "",
     obs: e.obs || "",
     day: dia,
     startYear: ano,
@@ -155,14 +176,60 @@ function textoEventoCalendario(a){
 }
 
 function classeCalendarioPorStatusPrioridade(ev,a){
+  if(corSonovaValida(a.cor)){ ev.classList.add("ev-snv-"+a.cor); return; }
   if(a.status==="Concluído")         ev.classList.add("ev-done");
   else if(a.prioridade==="Alta")     ev.classList.add("ev-alta");
   else if(a.prioridade==="Média")    ev.classList.add("ev-media");
   else if(a.status==="Em andamento") ev.classList.add("ev-andamento");
 }
 
+function abrirSeletorCorSonova(evt, corAtual, aplicar){
+  evt.stopPropagation();
+  fecharSeletorCorSonova();
+  const pop=document.createElement("div");
+  pop.id="snvColorPicker";
+  pop.className="snv-color-pop";
+  pop.onclick=e=>e.stopPropagation();
+  CORES_SONOVA.forEach(c=>{
+    const b=document.createElement("button");
+    b.type="button";
+    b.className="snv-swatch"+(corAtual===c.id?" snv-swatch-ativa":"");
+    b.style.background=c.hex;
+    b.title=c.nome;
+    b.onclick=e=>{e.stopPropagation();aplicar(c.id);fecharSeletorCorSonova();};
+    pop.appendChild(b);
+  });
+  const auto=document.createElement("button");
+  auto.type="button";
+  auto.className="snv-swatch snv-swatch-auto"+(corAtual?"":" snv-swatch-ativa");
+  auto.title="Automatica (por status/prioridade)";
+  auto.textContent="A";
+  auto.onclick=e=>{e.stopPropagation();aplicar("");fecharSeletorCorSonova();};
+  pop.appendChild(auto);
+  document.body.appendChild(pop);
+  const largura=210;
+  pop.style.left=Math.max(8, Math.min(evt.clientX, window.innerWidth-largura))+"px";
+  pop.style.top=(evt.clientY+10)+"px";
+  setTimeout(()=>document.addEventListener("click", fecharSeletorCorSonova, {once:true}),0);
+}
+
+function fecharSeletorCorSonova(){
+  const pop=document.getElementById("snvColorPicker");
+  if(pop) pop.remove();
+}
+
+function botaoCorSonova(a, aplicar){
+  const dot=document.createElement("span");
+  dot.className="cal-cor-btn";
+  dot.title="Classificar com cor Sonova: "+nomeCorSonova(a.cor);
+  const hex=hexCorSonova(a.cor);
+  if(hex) dot.style.background=hex;
+  dot.onclick=e=>abrirSeletorCorSonova(e, a.cor||"", aplicar);
+  return dot;
+}
+
 function addCalendarActivity(day){
-  calQuickForm={day:Number(day)};
+  calQuickForm={day:Number(day), cor:""};
   renderCalendario();
   setTimeout(()=>{
     const input=document.getElementById("calQuickText");
@@ -170,13 +237,14 @@ function addCalendarActivity(day){
   },0);
 }
 
-function salvarAtividadeCalendarioDireta(day,texto,prioridade){
+function salvarAtividadeCalendarioDireta(day,texto,prioridade,cor){
   texto=sanitizePromptText(texto);
   if(!texto){ alert("Digite o nome da atividade antes de salvar."); return false; }
   prioridade=["Baixa","Média","Alta"].includes(prioridade) ? prioridade : "Média";
   calendarioDireto.push(normalizarEventoCalendario({
     text:texto,
     prioridade,
+    cor: corSonovaValida(cor) ? cor : "",
     status:"Pendente",
     day,
     startYear:calAno,
@@ -193,7 +261,8 @@ function salvarAtividadeCalendarioDireta(day,texto,prioridade){
 function salvarQuickFormCalendario(day){
   const input=document.getElementById("calQuickText");
   const select=document.getElementById("calQuickPrioridade");
-  return salvarAtividadeCalendarioDireta(day, input ? input.value : "", select ? select.value : "Média");
+  const cor=calQuickForm ? calQuickForm.cor : "";
+  return salvarAtividadeCalendarioDireta(day, input ? input.value : "", select ? select.value : "Média", cor);
 }
 
 function cancelarQuickFormCalendario(){
@@ -384,6 +453,101 @@ function dropOnDayCircle(toDay){
   dragSource=null; saveData(); showDay(toDay);
 }
 
+function iniciarDragEventoCalendario(e, el, payload){
+  dragCalSource=payload;
+  dragSource=null;
+  el.classList.add("cal-dragging");
+  e.dataTransfer.effectAllowed="move";
+  try{ e.dataTransfer.setData("text/plain", payload.tipo); }catch(_){}
+  const tip=document.getElementById("dragTooltip");
+  tip.textContent="Arrastando: solte em outro dia para mover ou sobre outra atividade para reordenar";
+  tip.style.display="block";
+}
+
+function finalizarDragEventoCalendario(){
+  dragCalSource=null;
+  const tip=document.getElementById("dragTooltip");
+  tip.style.display="none";
+  tip.textContent="↕ Arrastando atividade…";
+  document.querySelectorAll(".cal-dragging").forEach(x=>x.classList.remove("cal-dragging"));
+  document.querySelectorAll(".cal-event-drag-over").forEach(x=>x.classList.remove("cal-event-drag-over"));
+  document.querySelectorAll(".cal-drag-over").forEach(x=>x.classList.remove("cal-drag-over"));
+}
+
+function dropCalendarioInterno(toDay, alvo){
+  const src=dragCalSource;
+  if(!src) return;
+  dragCalSource=null;
+
+  if(src.tipo==="CAL"){
+    const fromIdx=calendarioDireto.findIndex(e=>e.id===src.id);
+    if(fromIdx<0){ renderCalendario(); return; }
+    const atv=calendarioDireto[fromIdx];
+    if(alvo && alvo.tipo==="CAL" && alvo.id!==src.id){
+      calendarioDireto.splice(fromIdx,1);
+      let toIdx=calendarioDireto.findIndex(e=>e.id===alvo.id);
+      if(toIdx<0) toIdx=calendarioDireto.length;
+      calendarioDireto.splice(toIdx,0,atv);
+    }
+    if(Number(atv.day)!==Number(toDay)){
+      atv.obs=(atv.obs||"")+` [Movida do dia ${atv.day} para ${toDay} via arraste no calendário]`;
+      atv.day=Number(toDay);
+    }
+    saveCalendarioDireto();
+    renderCalendario();
+    return;
+  }
+
+  const lista=activityData[src.day];
+  if(!lista || !lista[src.index]){ renderCalendario(); return; }
+  const atv=lista[src.index];
+
+  if(Number(src.day)===Number(toDay)){
+    if(alvo && alvo.tipo==="LT" && alvo.index!==src.index){
+      lista.splice(src.index,1);
+      let toIdx=alvo.index;
+      if(src.index<alvo.index) toIdx--;
+      lista.splice(toIdx,0,atv);
+      saveData();
+    }
+    renderCalendario();
+    return;
+  }
+
+  atv.obs=(atv.obs||"")+` [Movida do dia ${src.day} para ${toDay} via arraste no calendário]`;
+  if(!activityData[toDay]) activityData[toDay]=[];
+  if(alvo && alvo.tipo==="LT"){
+    activityData[toDay].splice(alvo.index,0,atv);
+  }else{
+    activityData[toDay].push(atv);
+  }
+  lista.splice(src.index,1);
+  if(lista.length===0) delete activityData[src.day];
+  saveData();
+  renderCalendario();
+}
+
+function ligarDragEventoCalendario(ev, cell, dia, payload){
+  ev.draggable=true;
+  ev.addEventListener("dragstart",e=>{e.stopPropagation();iniciarDragEventoCalendario(e,ev,payload);});
+  ev.addEventListener("dragend",finalizarDragEventoCalendario);
+  ev.addEventListener("dragover",e=>{
+    if(!dragCalSource) return;
+    e.preventDefault(); e.stopPropagation();
+    document.querySelectorAll(".cal-event-drag-over").forEach(x=>x.classList.remove("cal-event-drag-over"));
+    ev.classList.add("cal-event-drag-over");
+  });
+  ev.addEventListener("dragleave",()=>ev.classList.remove("cal-event-drag-over"));
+  ev.addEventListener("drop",e=>{
+    if(!dragCalSource) return;
+    e.preventDefault(); e.stopPropagation();
+    ev.classList.remove("cal-event-drag-over");
+    cell.classList.remove("cal-drag-over");
+    dropCalendarioInterno(dia, payload);
+    finalizarDragEventoCalendario();
+  });
+}
+
 function dropOnCalCell(toDay){
   if(!dragSource) return;
   const fromDay=dragSource.day; const fromIndex=dragSource.index;
@@ -543,6 +707,25 @@ function buildQuickFormCalendario(day){
     select.appendChild(opt);
   });
 
+  const cores=document.createElement("div");
+  cores.className="cal-quick-cores";
+  cores.title="Cor Sonova da atividade (opcional)";
+  CORES_SONOVA.forEach(c=>{
+    const b=document.createElement("button");
+    b.type="button";
+    b.className="snv-swatch snv-swatch-mini"+(calQuickForm && calQuickForm.cor===c.id?" snv-swatch-ativa":"");
+    b.style.background=c.hex;
+    b.title=c.nome;
+    b.onclick=e=>{
+      e.stopPropagation();
+      if(!calQuickForm) return;
+      calQuickForm.cor = calQuickForm.cor===c.id ? "" : c.id;
+      cores.querySelectorAll(".snv-swatch").forEach(s=>s.classList.remove("snv-swatch-ativa"));
+      if(calQuickForm.cor) b.classList.add("snv-swatch-ativa");
+    };
+    cores.appendChild(b);
+  });
+
   const actions=document.createElement("div");
   actions.className="cal-quick-actions";
   const salvar=document.createElement("button");
@@ -555,6 +738,7 @@ function buildQuickFormCalendario(day){
 
   wrap.appendChild(input);
   wrap.appendChild(select);
+  wrap.appendChild(cores);
   wrap.appendChild(actions);
   return wrap;
 }
@@ -590,12 +774,15 @@ function renderCalendario(){
       cell.appendChild(buildQuickFormCalendario(d));
     }
 
-    (activityData[d]||[]).filter(a=>a.noCalendario && textoEventoCalendario(a)).forEach(a=>{
+    (activityData[d]||[]).forEach((a,idx)=>{
+      if(!(a.noCalendario && textoEventoCalendario(a))) return;
       const ev=document.createElement("div"); ev.className="cal-event cal-event-lt";
       classeCalendarioPorStatusPrioridade(ev,a);
       ev.innerHTML=`<span class="cal-event-text">${escHtml(textoEventoCalendario(a))}</span><span class="cal-tag-lt">LT</span>`;
-      ev.title=`${textoEventoCalendario(a)} | ${a.responsavel||"—"} | ${a.status} | Mapeada da Linha do Tempo`;
+      ev.title=`${textoEventoCalendario(a)} | ${a.responsavel||"—"} | ${a.status} | Cor: ${nomeCorSonova(a.cor)} | Mapeada da Linha do Tempo`;
       ev.onclick=e=>{e.stopPropagation();openPanel("timelinePanel");showDay(d);};
+      ev.insertBefore(botaoCorSonova(a,cor=>{a.cor=cor;saveData();renderCalendario();}), ev.firstChild);
+      ligarDragEventoCalendario(ev, cell, d, {tipo:"LT", day:Number(d), index:idx});
       cell.appendChild(ev);
     });
 
@@ -603,14 +790,21 @@ function renderCalendario(){
       const ev=document.createElement("div"); ev.className="cal-event cal-event-direto";
       classeCalendarioPorStatusPrioridade(ev,a);
       ev.innerHTML=`<span class="cal-event-text">${escHtml(textoEventoCalendario(a))}</span><span class="cal-tag-cal">M</span>`;
-      ev.title=`${textoEventoCalendario(a)} | ${a.status} | Atividade direta do calendário com repetição mensal`;
+      ev.title=`${textoEventoCalendario(a)} | ${a.status} | Cor: ${nomeCorSonova(a.cor)} | Atividade direta do calendário com repetição mensal`;
       ev.onclick=e=>{e.stopPropagation();editarCalendarioDireto(a.id);};
+      ev.insertBefore(botaoCorSonova(a,cor=>{a.cor=cor;saveCalendarioDireto();renderCalendario();}), ev.firstChild);
+      ligarDragEventoCalendario(ev, cell, d, {tipo:"CAL", id:a.id, day:Number(d)});
       cell.appendChild(ev);
     });
 
     cell.ondragover=e=>{e.preventDefault();cell.classList.add("cal-drag-over");};
     cell.ondragleave=()=>cell.classList.remove("cal-drag-over");
-    cell.ondrop=e=>{e.preventDefault();cell.classList.remove("cal-drag-over");dropOnCalCell(d);};
+    cell.ondrop=e=>{
+      e.preventDefault();
+      cell.classList.remove("cal-drag-over");
+      if(dragCalSource){ dropCalendarioInterno(d,null); finalizarDragEventoCalendario(); }
+      else dropOnCalCell(d);
+    };
     grid.appendChild(cell);
   }
 }
@@ -637,11 +831,11 @@ function exportToExcel(){
   let linhas=[];
   Object.keys(activityData).forEach(day=>{
     activityData[day].forEach(a=>{
-      linhas.push({Origem:"Linha do Tempo",Dia:day,Atividade:a.text,Responsavel:a.responsavel,Prioridade:a.prioridade,Status:a.status,Inicio:a.inicio,Fim:a.fim,Depende:a.depende,Obs:a.obs,Calendário:a.noCalendario?"Sim":"Não",Recorrência:""});
+      linhas.push({Origem:"Linha do Tempo",Dia:day,Atividade:a.text,Responsavel:a.responsavel,Prioridade:a.prioridade,Status:a.status,Cor:nomeCorSonova(a.cor),Inicio:a.inicio,Fim:a.fim,Depende:a.depende,Obs:a.obs,Calendário:a.noCalendario?"Sim":"Não",Recorrência:""});
     });
   });
   calendarioDireto.forEach(a=>{
-    linhas.push({Origem:"Calendário direto",Dia:a.day,Atividade:a.text,Responsavel:a.responsavel,Prioridade:a.prioridade,Status:a.status,Inicio:`${String(a.startMonth+1).padStart(2,"0")}/${a.startYear}`,Fim:"",Depende:"",Obs:a.obs,Calendário:"Sim",Recorrência:"Mensal automática"});
+    linhas.push({Origem:"Calendário direto",Dia:a.day,Atividade:a.text,Responsavel:a.responsavel,Prioridade:a.prioridade,Status:a.status,Cor:nomeCorSonova(a.cor),Inicio:`${String(a.startMonth+1).padStart(2,"0")}/${a.startYear}`,Fim:"",Depende:"",Obs:a.obs,Calendário:"Sim",Recorrência:"Mensal automática"});
   });
   const ws=XLSX.utils.json_to_sheet(linhas);
   const wb=XLSX.utils.book_new();

@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="styles.css?v=20260629-2">
+    <link rel="stylesheet" href="styles.css?v=20260705-1">
 </head>
 
 <body>
@@ -126,7 +126,7 @@
       <button class="btn btn-outline" onclick="calNavegar(1)">Próximo &#8250;</button>
     </div>
     <div class="hint-bar cal-hint">
-      Clique no + de um dia para digitar uma atividade direto no calendário. Essas atividades serão repetidas automaticamente nos meses seguintes. As atividades vindas da Linha do Tempo aparecem com a etiqueta LT.
+      Clique no + de um dia para digitar uma atividade direto no calendário. Essas atividades serão repetidas automaticamente nos meses seguintes. As atividades vindas da Linha do Tempo aparecem com a etiqueta LT. Arraste uma atividade para outro dia para movê-la, ou solte sobre outra atividade para reordenar. Clique na bolinha à esquerda de cada atividade para classificá-la com uma cor Sonova.
     </div>
     <div class="cal-legenda">
       <strong style="color:var(--text-muted);font-size:11px;letter-spacing:.5px;">LEGENDA</strong>
@@ -137,6 +137,14 @@
       <span class="leg-item"><span class="leg-dot" style="background:var(--success)"></span> Concluído</span>
       <span style="margin-left:8px;color:var(--text-light);"><strong>LT</strong> = mapeada da Linha do Tempo</span>
       <span style="margin-left:8px;color:var(--text-light);"><strong>M</strong> = calendário direto mensal</span>
+      <span style="width:100%;"></span>
+      <strong style="color:var(--text-muted);font-size:11px;letter-spacing:.5px;">CORES SONOVA</strong>
+      <span class="leg-item"><span class="leg-dot" style="background:var(--snv-azul)"></span> Azul Sonova</span>
+      <span class="leg-item"><span class="leg-dot" style="background:var(--snv-escuro)"></span> Azul Escuro</span>
+      <span class="leg-item"><span class="leg-dot" style="background:var(--snv-petroleo)"></span> Petróleo</span>
+      <span class="leg-item"><span class="leg-dot" style="background:var(--snv-claro)"></span> Azul Claro</span>
+      <span class="leg-item"><span class="leg-dot" style="background:var(--snv-bordo)"></span> Bordô</span>
+      <span class="leg-item"><span class="leg-dot" style="background:var(--snv-terra)"></span> Terracota</span>
     </div>
     <div class="cal-grid" id="calGrid"></div>
   </div>
@@ -155,6 +163,6 @@
 </footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="app.js?v=20260629-2"></script>
+<script src="app.js?v=20260705-1"></script>
 </body>
 </html>
