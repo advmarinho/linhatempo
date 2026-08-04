@@ -150,3 +150,27 @@ Como usar:
 4. Escolha a prioridade.
 5. Clique em Salvar.
 6. Ao navegar para o mês seguinte, a atividade aparecerá automaticamente no mesmo dia.
+
+## Atualização 04/08/2026 - Destaque de conclusão e indicadores PMO
+
+A conclusão de atividades deixou de ser apenas uma cor discreta e passou a ser um estado visual forte, com feedback imediato.
+
+Destaque de conclusão:
+
+- Linha concluída na tabela agora tem fundo verde reforçado, barra de acento verde à esquerda e texto da atividade riscado, ficando nítida ao lado de Pendente e Em andamento.
+- Círculo do dia totalmente concluído recebe verde mais vivo, anel de brilho e um selo de check branco no canto.
+- Ao marcar uma atividade como Concluída, a linha pisca em verde e o círculo do dia dá um leve pulso, com uma notificação discreta (toast) de confirmação.
+- Verde de concluído unificado e mais saturado no Fluxo (Kanban), no Gantt, no Calendário e na legenda.
+
+Indicadores PMO (novo painel de KPIs na Linha do Tempo):
+
+- Cartões automáticos de Total, Concluídas, Em andamento, Pendentes e Atrasadas.
+- Atualização em tempo real a cada alteração de status ou prazo.
+- Atrasadas considera atividades não concluídas com data de fim vencida.
+
+Meta de 100%:
+
+- Ao concluir todas as atividades do mês, a barra de progresso ganha brilho verde e é exibida uma comemoração com confete e um toast de meta atingida.
+- O confete dispara apenas na transição para 100%, sem repetir a cada salvamento.
+
+Observação técnica: `index.html` recebeu novo cache busting (`v=20260804-1`) em `app.js` e `styles.css`.

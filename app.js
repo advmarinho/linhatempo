@@ -5,6 +5,8 @@ let dragCalSource = null;
 let calAno = new Date().getFullYear();
 let calMes = new Date().getMonth();
 let calQuickForm = null;
+let estavaCompleto = null;
+let bulkSelecionados = new Set();
 
 const CORES_SONOVA = [
   { id: "azul",     nome: "Azul Sonova",  hex: "#0083CA" },
@@ -568,9 +570,15 @@ function toggleCalFlag(day,index,el){
 }
 
 function updateField(day,index,field,value){
+  const anterior=activityData[day][index][field];
   activityData[day][index][field]=value;
   saveData();
-  if(field==="status") showDay(day);
+  if(field==="status"){
+    showDay(day);
+    if(value==="Concluído" && anterior!=="Concluído"){
+      celebrarConclusao(day,index);
+    }
+  }
 }
 
 function dropOnRow(toDay,toIndex){
@@ -769,6 +777,151 @@ function moveActivity(day,index){
   saveData(); showDay(novo);
 }
 
+/* ── TRANSFERÊNCIA EM LOTE PARA DIA ESPECÍFICO ── */
+function bulkGarantirIds(){
+  Object.keys(activityData).forEach(day=>{
+    activityData[day].forEach(a=>{ if(!a.id) a.id=newId(); });
+  });
+}
+
+function bulkDiasDoMes(){
+  const now=new Date();
+  return { y:now.getFullYear(), m:now.getMonth(), total:getDaysInMonth(now.getFullYear(),now.getMonth()) };
+}
+
+function abrirTransferenciaLote(){
+  const totalAtiv=Object.values(activityData).reduce((s,v)=>s+v.length,0);
+  if(totalAtiv===0){ alert("Não há atividades para transferir."); return; }
+  bulkGarantirIds();
+  bulkSelecionados=new Set();
+  const filtro=document.getElementById("bulkFiltroStatus"); if(filtro) filtro.value="";
+
+  const { y,m,total }=bulkDiasDoMes();
+  const hoje=new Date().getDate();
+  const diasSemana=["dom","seg","ter","qua","qui","sex","sáb"];
+  const sel=document.getElementById("bulkDiaAlvo");
+  sel.innerHTML="";
+  for(let d=1;d<=total;d++){
+    const dow=new Date(y,m,d).getDay();
+    const fds=(dow===0||dow===6)?" — "+diasSemana[dow]+" (FDS)":" — "+diasSemana[dow];
+    const opt=document.createElement("option");
+    opt.value=d;
+    opt.textContent=`Dia ${d}${fds}`+(d===hoje?" · hoje":"");
+    if(d===hoje) opt.selected=true;
+    sel.appendChild(opt);
+  }
+
+  renderBulkLista();
+  atualizarBulkCount();
+  document.getElementById("bulkOverlay").classList.add("open");
+}
+
+function fecharTransferenciaLote(evt){
+  if(evt && evt.target && evt.target.id && evt.target.id!=="bulkOverlay") return;
+  document.getElementById("bulkOverlay").classList.remove("open");
+}
+
+function renderBulkLista(){
+  const host=document.getElementById("bulkList");
+  const filtro=(document.getElementById("bulkFiltroStatus")||{}).value||"";
+  host.innerHTML="";
+  const { y,m }=bulkDiasDoMes();
+  const dias=Object.keys(activityData).map(Number).sort((a,b)=>a-b);
+  let algum=false;
+
+  dias.forEach(day=>{
+    const itens=activityData[day].filter(a=>!filtro||a.status===filtro);
+    if(itens.length===0) return;
+    algum=true;
+    const dow=new Date(y,m,day).getDay();
+    const grupo=document.createElement("div"); grupo.className="bulk-day-group";
+    const lbl=document.createElement("div"); lbl.className="bulk-day-label";
+    lbl.innerHTML=`Dia ${day}`+((dow===0||dow===6)?` <span class="bulk-weekend-tag">FDS</span>`:"");
+    grupo.appendChild(lbl);
+
+    itens.forEach(a=>{
+      const linha=document.createElement("label");
+      linha.className="bulk-item"+(bulkSelecionados.has(a.id)?" sel":"");
+      const stClass="bulk-st-"+(a.status||"").replace(/\s+/g,"");
+      const prioClass="bulk-prio-"+(a.prioridade||"Média");
+      const texto=a.text&&a.text.trim() ? escHtml(a.text) : `<span class="bulk-empty">(sem título)</span>`;
+      linha.innerHTML=`
+        <input type="checkbox" ${bulkSelecionados.has(a.id)?"checked":""} onchange="bulkToggle('${a.id}',this.checked)">
+        <span class="bulk-prio-dot ${prioClass}" title="Prioridade ${escHtml(a.prioridade||"Média")}"></span>
+        <span class="bulk-item-text">${texto}</span>
+        <span class="bulk-status-pill ${stClass}">${escHtml(a.status||"Pendente")}</span>`;
+      grupo.appendChild(linha);
+    });
+    host.appendChild(grupo);
+  });
+
+  if(!algum){
+    host.innerHTML=`<div class="bulk-empty-state">Nenhuma atividade para o filtro selecionado.</div>`;
+  }
+}
+
+function bulkToggle(id,checked){
+  if(checked) bulkSelecionados.add(id); else bulkSelecionados.delete(id);
+  const cb=document.querySelector(`#bulkList input[onchange*="'${id}'"]`);
+  if(cb) cb.closest(".bulk-item").classList.toggle("sel",checked);
+  atualizarBulkCount();
+}
+
+function bulkSelecionarTodas(on){
+  const filtro=(document.getElementById("bulkFiltroStatus")||{}).value||"";
+  Object.keys(activityData).forEach(day=>{
+    activityData[day].forEach(a=>{
+      if(filtro && a.status!==filtro) return;
+      if(on) bulkSelecionados.add(a.id); else bulkSelecionados.delete(a.id);
+    });
+  });
+  renderBulkLista();
+  atualizarBulkCount();
+}
+
+function atualizarBulkCount(){
+  const el=document.getElementById("bulkCount");
+  if(el) el.textContent=bulkSelecionados.size;
+}
+
+function confirmarTransferenciaLote(){
+  if(bulkSelecionados.size===0){ alert("Selecione ao menos uma atividade."); return; }
+  const alvo=parseInt(document.getElementById("bulkDiaAlvo").value);
+  const { total }=bulkDiasDoMes();
+  if(!alvo||isNaN(alvo)||alvo<1||alvo>total){ alert("Dia destino inválido."); return; }
+
+  const movidas=[];
+  Object.keys(activityData).map(Number).forEach(day=>{
+    if(day===alvo) return; // já estão no destino
+    const mantem=[], move=[];
+    activityData[day].forEach(a=>{
+      if(bulkSelecionados.has(a.id)){
+        a.obs=(a.obs||"")+` [Transferida em lote: dia ${day} → ${alvo}]`;
+        move.push(a);
+      } else mantem.push(a);
+    });
+    if(move.length){
+      movidas.push(...move);
+      if(mantem.length) activityData[day]=mantem; else delete activityData[day];
+    }
+  });
+
+  if(movidas.length===0){
+    alert("As atividades selecionadas já estão no dia destino.");
+    fecharTransferenciaLote();
+    return;
+  }
+
+  if(!activityData[alvo]) activityData[alvo]=[];
+  activityData[alvo].push(...movidas);
+
+  bulkSelecionados=new Set();
+  saveData();
+  fecharTransferenciaLote();
+  showDay(alvo);
+  showToast(`${movidas.length} atividade(s) transferida(s) para o dia ${alvo}`);
+}
+
 function renderFluxo(){
   const todo=document.getElementById("todo");
   const doing=document.getElementById("doing");
@@ -958,13 +1111,111 @@ function renderCalendario(){
     grid.appendChild(cell);
   }
 }
+function showToast(msg, tipo){
+  let host=document.getElementById("toastHost");
+  if(!host){ host=document.createElement("div"); host.id="toastHost"; document.body.appendChild(host); }
+  const t=document.createElement("div");
+  t.className="toast"+(tipo==="meta"?" toast-meta":"");
+  const icon=document.createElement("span");
+  icon.className="toast-icon";
+  icon.textContent=tipo==="meta"?"\u2605":"\u2713";
+  const txt=document.createElement("span");
+  txt.textContent=msg;
+  t.appendChild(icon); t.appendChild(txt);
+  host.appendChild(t);
+  const vida=tipo==="meta"?3800:2600;
+  setTimeout(()=>{ t.classList.add("leaving"); setTimeout(()=>t.remove(),300); }, vida);
+}
+
+function dispararConfete(){
+  let host=document.getElementById("confettiHost");
+  if(!host){ host=document.createElement("div"); host.id="confettiHost"; document.body.appendChild(host); }
+  const cores=["#0083CA","#16a34a","#6EB4DC","#7D0041","#005A64","#d48700","#12b76a","#003C64"];
+  const qtd=44;
+  for(let i=0;i<qtd;i++){
+    const p=document.createElement("div");
+    p.className="confetti-piece";
+    p.style.left=(Math.random()*100)+"vw";
+    p.style.background=cores[i%cores.length];
+    p.style.animationDuration=(1.6+Math.random()*1.4)+"s";
+    p.style.animationDelay=(Math.random()*0.35)+"s";
+    p.style.width=(6+Math.random()*7)+"px";
+    p.style.height=(10+Math.random()*8)+"px";
+    host.appendChild(p);
+    setTimeout(()=>p.remove(),3600);
+  }
+}
+
+function renderKpis(total,done,doing,pend,late){
+  const host=document.getElementById("kpiStrip");
+  if(!host) return;
+  const cards=[
+    { cls:"kpi-total", n:total, l:"Total" },
+    { cls:"kpi-done",  n:done,  l:"Conclu\u00eddas" },
+    { cls:"kpi-doing", n:doing, l:"Em andamento" },
+    { cls:"kpi-pend",  n:pend,  l:"Pendentes" },
+    { cls:"kpi-late",  n:late,  l:"Atrasadas" }
+  ];
+  host.innerHTML=cards.map(c=>
+    `<div class="kpi-card ${c.cls}"><div class="kpi-num">${c.n}</div><div class="kpi-lbl">${c.l}</div></div>`
+  ).join("");
+}
+
+function celebrarConclusao(day,index){
+  const body=document.getElementById("activityBody");
+  if(body){
+    const linha=body.children[index];
+    if(linha && linha.classList.contains("tr-concluido")){
+      linha.classList.remove("row-just-done");
+      void linha.offsetWidth;
+      linha.classList.add("row-just-done");
+      setTimeout(()=>linha.classList.remove("row-just-done"),1100);
+    }
+  }
+  const circulo=[...document.querySelectorAll(".day")].find(d=>d.innerText==day);
+  if(circulo && circulo.classList.contains("concluido")){
+    circulo.classList.remove("day-pulse");
+    void circulo.offsetWidth;
+    circulo.classList.add("day-pulse");
+    setTimeout(()=>circulo.classList.remove("day-pulse"),700);
+  }
+  showToast("Atividade conclu\u00edda");
+}
+
 function updateProgress(){
-  let total=0,done=0;
-  Object.keys(activityData).forEach(day=>{activityData[day].forEach(a=>{total++;if(a.status==="Concluído")done++;});});
-  const pct=total?((done/total)*100).toFixed(1):0;
+  const hoje=new Date(); hoje.setHours(0,0,0,0);
+  let total=0,done=0,doing=0,pend=0,late=0;
+  Object.keys(activityData).forEach(day=>{
+    activityData[day].forEach(a=>{
+      total++;
+      if(a.status==="Concluído"){ done++; }
+      else if(a.status==="Em andamento"){ doing++; }
+      else { pend++; }
+      if(a.status!=="Concluído" && a.fim){
+        const f=new Date(a.fim);
+        if(!Number.isNaN(f.getTime()) && f<hoje) late++;
+      }
+    });
+  });
+  const pctNum=total?(done/total)*100:0;
+  const pct=total?pctNum.toFixed(1):0;
   document.getElementById("progressLabel").innerText=`Progresso: ${done} de ${total} concluída${total!==1?"s":""}`;
-  document.getElementById("progressFill").style.width=pct+"%";
-  document.getElementById("progressPct").innerText=pct+"%";
+  const fill=document.getElementById("progressFill");
+  const pctEl=document.getElementById("progressPct");
+  fill.style.width=pct+"%";
+  pctEl.innerText=pct+"%";
+
+  const completoAgora = total>0 && done===total;
+  fill.classList.toggle("full", completoAgora);
+  pctEl.classList.toggle("full", completoAgora);
+
+  renderKpis(total,done,doing,pend,late);
+
+  if(completoAgora && estavaCompleto===false){
+    dispararConfete();
+    showToast("Tudo conclu\u00eddo neste m\u00eas!","meta");
+  }
+  estavaCompleto=completoAgora;
 }
 
 function verificarAtrasos(){
@@ -1056,6 +1307,13 @@ document.addEventListener("dragover",e=>{
   if(tip.style.display==="block"){tip.style.left=(e.clientX+16)+"px";tip.style.top=(e.clientY+10)+"px";}
 });
 
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"){
+    const ov=document.getElementById("bulkOverlay");
+    if(ov && ov.classList.contains("open")) fecharTransferenciaLote();
+  }
+});
+
 updateMesTexto();
 createTimeline();
 const hoje=new Date().getDate();
@@ -1068,5 +1326,7 @@ Object.assign(window,{
   toggleCalFlag,updateField,addActivity,deleteActivity,setAllActivitiesToPendente,
   moveAllWeekendActivitiesToWeekday,moveActivity,renderFluxo,filterFluxo,renderGantt,
   calNavegar,addCalendarActivity,salvarQuickFormCalendario,cancelarQuickFormCalendario,
-  editarCalendarioDireto,exportToExcel,exportBackup,importBackup,handleImportFile,openPanel
+  editarCalendarioDireto,exportToExcel,exportBackup,importBackup,handleImportFile,openPanel,
+  abrirTransferenciaLote,fecharTransferenciaLote,renderBulkLista,bulkToggle,
+  bulkSelecionarTodas,confirmarTransferenciaLote
 });

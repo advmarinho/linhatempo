@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="styles.css?v=20260705-2">
+    <link rel="stylesheet" href="styles.css?v=20260804-2">
 </head>
 
 <body>
@@ -45,6 +45,8 @@
 
     <div class="timeline" id="timeline"></div>
 
+    <div class="kpi-strip" id="kpiStrip"></div>
+
     <div class="progress-wrap">
       <div class="progress-label" id="progressLabel">Progresso: –</div>
       <div class="progress-bar-bg">
@@ -70,6 +72,7 @@
         <div class="toolbar-sep"></div>
         <button class="btn btn-warning" onclick="setAllActivitiesToPendente()">↩ Pendente</button>
         <button class="btn btn-info"    onclick="moveAllWeekendActivitiesToWeekday()">📅 FDS → Semana</button>
+        <button class="btn btn-info"    onclick="abrirTransferenciaLote()">⇄ Transferir em lote</button>
       </div>
 
       <input type="file" id="importFile" accept=".json" style="display:none" onchange="handleImportFile(event)">
@@ -162,7 +165,44 @@
   </div>
 </footer>
 
+<!-- MODAL: TRANSFERÊNCIA EM LOTE -->
+<div id="bulkOverlay" class="bulk-overlay" onclick="fecharTransferenciaLote(event)">
+  <div class="bulk-modal" role="dialog" aria-modal="true" aria-labelledby="bulkTitle">
+    <div class="bulk-head">
+      <span id="bulkTitle">⇄ Transferência em lote de atividades</span>
+      <button class="bulk-close" onclick="fecharTransferenciaLote()" title="Fechar">✕</button>
+    </div>
+    <div class="bulk-tools">
+      <button class="btn btn-ghost" onclick="bulkSelecionarTodas(true)">Selecionar visíveis</button>
+      <button class="btn btn-ghost" onclick="bulkSelecionarTodas(false)">Limpar seleção</button>
+      <div class="toolbar-sep"></div>
+      <label class="bulk-filtro">Filtrar por status:
+        <select id="bulkFiltroStatus" onchange="renderBulkLista()">
+          <option value="">Todos</option>
+          <option value="Pendente">Pendente</option>
+          <option value="Em andamento">Em andamento</option>
+          <option value="Concluído">Concluído</option>
+        </select>
+      </label>
+    </div>
+    <div class="bulk-list" id="bulkList"></div>
+    <div class="bulk-foot">
+      <div class="bulk-count"><strong id="bulkCount">0</strong> atividade(s) selecionada(s)</div>
+      <label class="bulk-alvo">Transferir para o dia
+        <select id="bulkDiaAlvo"></select>
+      </label>
+      <div class="bulk-actions">
+        <button class="btn btn-ghost" onclick="fecharTransferenciaLote()">Cancelar</button>
+        <button class="btn btn-primary" onclick="confirmarTransferenciaLote()">Transferir</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toastHost"></div>
+<div id="confettiHost"></div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="app.js?v=20260705-3"></script>
+<script src="app.js?v=20260804-2"></script>
 </body>
 </html>
